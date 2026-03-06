@@ -2345,9 +2345,22 @@ JSON形式のみで返してください（コードブロックなし）:
 }
 
 async function callClaude(systemPrompt, userPrompt, maxTokens) {
+  // file://で開いている場合はCORSでブロックされるため事前に警告
+  if (location.protocol === 'file:') {
+    throw new Error('file://では動作しません。GitHub PagesのURLで開いてください（下のGitHub設定ガイドを参照）');
+  }
+  const apiKey = localStorage.getItem('nf_api_key') || '';
+  if (!apiKey) {
+    throw new Error('APIキーが未設定です。コンソールで localStorage.setItem("nf_api_key","sk-ant-...") を実行してください');
+  }
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{'Content-Type':'application/json'},
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body:JSON.stringify({
       model:'claude-sonnet-4-20250514',
       max_tokens: maxTokens || 8000,
@@ -2355,7 +2368,10 @@ async function callClaude(systemPrompt, userPrompt, maxTokens) {
       messages:[{role:'user',content:userPrompt||systemPrompt}]
     })
   });
-  if(!res.ok) throw new Error(`API Error ${res.status}`);
+  if(!res.ok) {
+    const errBody = await res.text().catch(()=>'');
+    throw new Error(`API Error ${res.status}: ${errBody.substring(0,200)}`);
+  }
   const d=await res.json();
   return d.content?.[0]?.text||'';
 }
@@ -2818,14 +2834,13 @@ function saveDashboardCache() {
 }
 
 // note.com 公開API経由でユーザー情報・記事一覧を取得
+// ※ file://で開いている場合はCORSでブロックされるため空を返す（GitHub Pages上では動作）
 async function fetchNoteUser(noteUrl) {
-  if (!noteUrl) return null;
+  if (!noteUrl || location.protocol === 'file:') return null;
   try {
-    // URLからユーザー名を抽出
     const m = noteUrl.match(/note\.com\/([^/?#]+)/);
     if (!m) return null;
     const userId = m[1];
-    // note公開API（CORS対応）
     const res = await fetch(`https://note.com/api/v2/creators/${userId}`, {
       headers: {'Accept': 'application/json'}
     });
@@ -2836,7 +2851,7 @@ async function fetchNoteUser(noteUrl) {
 }
 
 async function fetchNoteList(noteUrl) {
-  if (!noteUrl) return [];
+  if (!noteUrl || location.protocol === 'file:') return [];
   try {
     const m = noteUrl.match(/note\.com\/([^/?#]+)/);
     if (!m) return [];
@@ -3059,115 +3074,6 @@ function renderNoteList() {
 function escStr(s){return (s||'').replace(/'/g,"\\'").replace(/\n/g,'\\n').substring(0,200);}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-// ══════════════════════════════════════════════
-// SUPABASE — バックグラウンド自動同期（全デバイス）
-// ══════════════════════════════════════════════
-// ⚙️ 初回のみここにSupabaseのURLとKeyを入れてください
-// supabase.com → Project Settings → API から取得
-const SUPABASE_URL  = localStorage.getItem('nf_sb_url')  || '';
-const SUPABASE_ANON_KEY = localStorage.getItem('nf_sb_key') || '';
-
-let sb = null;
-let sbReady = false;
-let syncUserId = localStorage.getItem('nf_user_id') || 'user_' + Math.random().toString(36).slice(2,10);
-localStorage.setItem('nf_user_id', syncUserId);
-
-async function initSupabase() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    showSyncStatus('local', 'このデバイスのみ保存（Supabase未設定）');
-    return;
-  }
-  try {
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    // テーブル存在確認
-    const { error } = await sb.from('nf_accounts').select('id').limit(1);
-    if (error && error.code === '42P01') {
-      // テーブルが無ければ案内
-      showSyncStatus('warn', 'Supabaseテーブル未作成。下のSQLを実行してください');
-      return;
-    }
-    sbReady = true;
-    await syncFromCloud(); // 起動時にクラウドから読み込み
-    setupRealtimeSync();
-    showSyncStatus('cloud', 'クラウド同期中 — 全デバイスで同期されます');
-  } catch(e) {
-    showSyncStatus('local', 'ローカル保存（同期エラー: ' + e.message + '）');
-  }
-}
-
-function showSyncStatus(type, msg) {
-  const el = document.getElementById('sync-status');
-  if (!el) return;
-  const styles = {
-    cloud: 'background:#e8f8f0;border:1px solid rgba(0,168,120,.3);color:var(--em3)',
-    warn: 'background:#fff8e8;border:1px solid rgba(224,136,0,.3);color:#9a6800',
-    local: 'background:#f4faf7;border:1px solid var(--em4);color:#5a7f68'
-  };
-  const icons = { cloud:'☁️', warn:'⚠️', local:'💾' };
-  el.style.cssText = `display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:10px;font-family:var(--fm);${styles[type]||styles.local}`;
-  el.innerHTML = `${icons[type]||'💾'} ${msg}`;
-}
-
-// クラウドからアカウント読み込み
-async function syncFromCloud() {
-  if (!sbReady) return;
-  try {
-    const { data, error } = await sb.from('nf_accounts')
-      .select('*')
-      .eq('user_id', syncUserId)
-      .order('created_at', { ascending: true });
-    if (error) throw error;
-    if (data && data.length > 0) {
-      ACCOUNTS = data.map(r => JSON.parse(r.data));
-      renderAccounts();
-      populateSelects();
-      renderConnectList();
-      toast('☁️ クラウドから読み込み', `${ACCOUNTS.length}件のアカウントを同期しました`);
-    }
-  } catch(e) {
-    console.warn('Cloud sync error:', e);
-  }
-}
-
-// クラウドへアカウント保存
-async function saveAccountsCloud() {
-  // ローカルは常に保存
-  saveAccountsLocal();
-  if (!sbReady) return;
-  try {
-    // 既存を削除して全件upsert
-    await sb.from('nf_accounts').delete().eq('user_id', syncUserId);
-    if (ACCOUNTS.length > 0) {
-      const rows = ACCOUNTS.map(ac => ({
-        user_id: syncUserId,
-        account_id: ac.id,
-        data: JSON.stringify(ac),
-        updated_at: new Date().toISOString()
-      }));
-      const { error } = await sb.from('nf_accounts').insert(rows);
-      if (error) throw error;
-    }
-    showSyncStatus('cloud', '同期完了 ' + new Date().toLocaleTimeString('ja-JP'));
-  } catch(e) {
-    console.warn('Save to cloud error:', e);
-    showSyncStatus('warn', 'クラウド保存失敗（ローカルには保存済）');
-  }
-}
-
-// Realtime — 他のデバイスからの変更をリアルタイム受信
-function setupRealtimeSync() {
-  if (!sbReady) return;
-  sb.channel('nf_accounts_' + syncUserId)
-    .on('postgres_changes', {
-      event: '*', schema: 'public', table: 'nf_accounts',
-      filter: `user_id=eq.${syncUserId}`
-    }, async (payload) => {
-      await syncFromCloud();
-      showSyncStatus('cloud', '他のデバイスから更新を受信しました');
-    })
-    .subscribe();
-}
-
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 常時自動保存・同期システム
 // ボタン操作不要。変更があれば即ローカル保存＆クラウド同期
@@ -3311,6 +3217,20 @@ init();
 showStyleTip();
 loadDashboardData();
 setTimeout(() => { sw('dashboard'); refreshDashboard(); }, 100);
+
+// file://で開いている場合は警告バナーを表示
+if (location.protocol === 'file:') {
+  setTimeout(() => {
+    const banner = document.createElement('div');
+    banner.id = 'file-protocol-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0001a;color:#fff;padding:12px 20px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:sans-serif';
+    banner.innerHTML = `
+      <span>⚠️ <strong>file://で開いています</strong> — このままではnote生成・API通信がすべてブロックされます。<strong>GitHub PagesのURLで開くと全機能が動きます。</strong></span>
+      <button onclick="document.getElementById('file-protocol-banner').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:800;flex-shrink:0">✕ 閉じる</button>`;
+    document.body.prepend(banner);
+  }, 500);
+}
+
 // ダッシュボード自動集計（起動2秒後に取得 → 以降10分ごと）
 setTimeout(() => fetchAllDashboard(false), 2000);
 setInterval(() => fetchAllDashboard(false), 10 * 60 * 1000);
