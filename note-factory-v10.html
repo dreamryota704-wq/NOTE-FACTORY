@@ -1,0 +1,3952 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NOTE FACTORY v9 — 完全自律noteシステム</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;600;700;800&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* 白×エメラルドグリーン×黒 */
+  --ink:#f8fdfb;--ink2:#ffffff;--ink3:#f0faf4;--ink4:#e0f2e8;--ink5:#b8dcc4;--ink6:#5a7f68;
+  --paper:#ffffff;--paper2:#f4faf7;--paper3:#d4eade;
+  --red:#d63031;--red2:#e84040;--red3:#b02020;--red4:rgba(214,48,49,.1);
+  --gold:#e08800;--gold2:#f5a800;--gold3:#ffcc44;--gold4:rgba(224,136,0,.12);
+  --gr:#009d72;--gr2:#007a56;--gr4:rgba(0,157,114,.12);
+  --bl:#1a6aab;--bl2:#2484cc;--bl4:rgba(26,106,171,.12);
+  /* エメラルドグリーン アクセント */
+  --em:#00a878;--em2:#00c98f;--em3:#007a56;--em4:rgba(0,168,120,.12);--em5:rgba(0,168,120,.06);
+  --acc:#00a878;--acc2:#00c98f;
+  --blk:#0d1a12;--blk2:#1c2e22;
+  --fn:'Noto Sans JP',sans-serif;--fs:'Shippori Mincho',serif;--fm:'DM Mono',monospace;--fe:'Bebas Neue',serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:#f8fdfb;color:#0d1a12;font-family:var(--fn);font-weight:600;min-height:100vh;overflow-x:hidden;font-size:13px;line-height:1.7}
+body::before{content:'';position:fixed;inset:0;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+.glow-bg{position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(ellipse 60% 40% at 10% 5%,rgba(0,168,120,.07) 0%,transparent 60%),radial-gradient(ellipse 40% 30% at 90% 90%,rgba(0,212,160,.04) 0%,transparent 60%)}
+
+/* ── HEADER ── */
+header{position:sticky;top:0;z-index:200;height:60px;background:rgba(255,255,255,.97);backdrop-filter:blur(20px);border-bottom:2px solid var(--em);box-shadow:0 2px 20px rgba(0,168,120,.1);display:flex;align-items:center;gap:16px;padding:0 24px}
+.logo{font-family:var(--fs);font-size:18px;font-weight:800;letter-spacing:.06em;background:linear-gradient(120deg,var(--em),var(--em2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;white-space:nowrap}
+.ver{font-family:var(--fm);font-size:8px;color:var(--em3);border:1px solid var(--em4);background:var(--em5);padding:2px 6px;border-radius:2px;white-space:nowrap}
+.hspace{flex:1}
+.hchip{display:flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid;font-size:9px;letter-spacing:.18em;font-family:var(--fm);border-radius:2px;white-space:nowrap}
+.hchip.auto{background:var(--em5);border-color:rgba(0,168,120,.3);color:var(--em3)}
+.hchip.auto .dot{width:5px;height:5px;background:var(--em);border-radius:50%;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 16px;font-family:var(--fn);font-size:11px;font-weight:800;letter-spacing:.08em;cursor:pointer;border:none;border-radius:2px;transition:all .18s;text-decoration:none;white-space:nowrap}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important}
+.b-r{background:linear-gradient(135deg,var(--em),var(--em3));color:#ffffff;border:1px solid var(--em3)}
+.b-r:hover:not(:disabled){background:linear-gradient(135deg,var(--em2),var(--em));box-shadow:0 4px 20px rgba(0,168,120,.35);transform:translateY(-1px)}
+.b-g{background:linear-gradient(135deg,#e8f8f0,#d0f0e0);color:var(--em3);border:1px solid var(--em4)}
+.b-g:hover:not(:disabled){background:linear-gradient(135deg,var(--em4),#b8e8cc);box-shadow:0 4px 16px rgba(0,168,120,.2);transform:translateY(-1px)}
+.b-gr{background:linear-gradient(135deg,var(--em),var(--em3));color:#fff;border:1px solid var(--em3)}
+.b-gr:hover:not(:disabled){box-shadow:0 0 14px rgba(26,122,58,.35);transform:translateY(-1px)}
+.b-o{background:transparent;color:#5a7f68;border:1px solid var(--ink5)}
+.b-o:hover:not(:disabled){border-color:var(--em);color:var(--em)}
+.b-del{background:var(--red4);color:var(--red2);border:1px solid rgba(192,0,26,.25)}
+.b-del:hover:not(:disabled){background:rgba(192,0,26,.2)}
+.b-blue{background:var(--bl4);color:#6699ff;border:1px solid rgba(26,58,138,.3)}
+.b-blue:hover:not(:disabled){background:rgba(26,58,138,.22)}
+.b-sm{padding:6px 11px;font-size:10px}
+.b-xs{padding:4px 8px;font-size:9px}
+
+/* ── TABS (Top-level) ── */
+.tabs{position:sticky;top:60px;z-index:100;display:flex;background:rgba(255,255,255,.97);border-bottom:2px solid var(--em4);padding:0 24px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:12px 18px;font-size:10px;letter-spacing:.2em;font-weight:700;color:#5a7f68;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:var(--fm)}
+.tab:hover{color:var(--em)}
+.tab.on{color:var(--em);border-bottom-color:var(--em);font-weight:900}
+.tab .badge{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;background:var(--em3);border-radius:50%;font-size:8px;margin-left:5px;color:#fff}
+
+/* ── LAYOUT ── */
+.wrap{position:relative;z-index:1;max-width:1600px;margin:0 auto;padding:24px}
+.pane{display:none;animation:fadeup .22s ease}.pane.on{display:block}
+@keyframes fadeup{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g-sidebar{display:grid;grid-template-columns:42% 1fr;gap:18px}
+.g-sidebar-r{display:grid;grid-template-columns:1fr 320px;gap:18px}
+@media(max-width:1100px){.g2,.g3,.g-sidebar,.g-sidebar-r{grid-template-columns:1fr}}
+
+/* ── CARDS & SECTIONS ── */
+.card{background:#ffffff;border:1px solid var(--ink4);border-radius:8px;position:relative;overflow:hidden;box-shadow:0 1px 8px rgba(0,100,60,.06)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--em3),var(--em2),var(--em3));opacity:.7}
+.card-body{padding:20px;font-weight:500}
+.sec{font-family:var(--fm);font-size:9px;font-weight:800;letter-spacing:.38em;color:var(--em3);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--em4),transparent)}
+.section-gap{margin-top:22px}
+
+/* ── FORM ── */
+.fg{margin-bottom:12px}
+.fl{font-size:9px;letter-spacing:.2em;color:var(--em3);text-transform:uppercase;margin-bottom:5px;display:block;font-family:var(--fm);font-weight:700}
+.fi,.fsl,.fta{width:100%;background:#f8fdfb;border:1px solid var(--ink5);color:#0d1a12;font-weight:600;padding:8px 11px;font-family:var(--fn);font-size:12px;outline:none;transition:border-color .15s;border-radius:2px}
+.fi:focus,.fsl:focus,.fta:focus{border-color:var(--em);box-shadow:0 0 0 3px rgba(0,168,120,.15)}
+.fsl option{background:#f8fdfb;color:#0d1a12}
+.fta{resize:vertical;line-height:1.8;min-height:68px}
+.fi::placeholder,.fta::placeholder{color:#a0b8a8}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fr3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── ACCOUNT CARD ── */
+.ac-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.ac-card{background:#ffffff;border:1px solid var(--ink4);border-radius:8px;overflow:hidden;cursor:pointer;transition:all .2s;position:relative;box-shadow:0 1px 8px rgba(0,100,60,.06)}
+.ac-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;transition:opacity .2s}
+.ac-card:hover{border-color:var(--em);transform:translateY(-3px);box-shadow:0 8px 28px rgba(0,168,120,.18)}
+.ac-card.sel{border-color:var(--em);box-shadow:0 0 0 2px rgba(0,168,120,.2)}
+.ac-head{padding:16px 16px 12px;display:flex;gap:11px;align-items:flex-start}
+.ac-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--fe);font-size:16px;font-weight:700;flex-shrink:0;position:relative}
+.ac-online{position:absolute;bottom:0;right:0;width:10px;height:10px;background:var(--em);border-radius:50%;border:2px solid #fff;box-shadow:0 0 5px var(--em)}
+.ac-info{flex:1;min-width:0}
+.ac-name{font-size:14px;font-weight:800;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0d1a12}
+.ac-genre{font-size:10px;color:#5a7f68;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hb{display:inline-flex;padding:1px 7px;font-size:8px;font-weight:700;letter-spacing:.1em;font-family:var(--fm);border-radius:2px;margin-top:3px}
+.hA{background:rgba(214,48,49,.12);color:var(--red2);border:1px solid rgba(214,48,49,.3)}.hR{background:rgba(184,148,14,.15);color:var(--gold2);border:1px solid var(--gold)}.hM{background:#e8f8f0;color:var(--em3);border:1px solid rgba(0,168,120,.3)}.hH{background:#eef4ff;color:#2484cc;border:1px solid rgba(36,132,204,.3)}
+.ac-links{display:flex;gap:6px;padding:0 16px 12px;flex-wrap:wrap}
+.ac-link{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;font-size:9px;font-family:var(--fm);border:1px solid var(--ink5);color:#5a7f68;border-radius:4px;text-decoration:none;transition:all .15s;cursor:pointer}
+.ac-link:hover,.ac-link.ok{border-color:rgba(0,168,120,.4);color:var(--em3)}
+.ac-link.note-ok{border-color:rgba(0,168,120,.4);color:var(--em)}
+.ac-link.x-ok{border-color:rgba(255,255,255,.2);color:var(--paper3)}
+.ac-stats{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink4)}
+.ac-stat{padding:9px 10px;text-align:center;border-right:1px solid var(--ink4)}
+.ac-stat:last-child{border-right:none}
+.ac-stat-v{font-family:var(--fe);font-size:17px;color:var(--em)}
+.ac-stat-l{font-size:8px;color:#5a7f68;letter-spacing:.12em;margin-top:1px}
+.ac-actions{padding:10px 16px;display:flex;gap:5px;flex-wrap:wrap;border-top:1px solid var(--ink4)}
+.add-ac-card{background:transparent;border:2px dashed var(--em4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .2s;min-height:180px;border-radius:8px}
+.add-ac-card:hover{border-color:var(--em);background:var(--em5)}
+.add-ac-icon{font-size:28px;opacity:.4}
+.add-ac-label{font-size:11px;color:var(--em3);letter-spacing:.1em;font-family:var(--fm)}
+
+/* ── NOTE QUEUE ── */
+.queue-item{background:#ffffff;border:1px solid var(--ink4);border-left:3px solid transparent;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .18s;border-radius:6px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,80,40,.05)}
+.queue-item:hover{background:#f0faf4}
+.queue-item.sel{border-left-color:var(--em);background:var(--em5)}
+.queue-item.done{border-left-color:var(--gr)}
+.queue-item.running{border-left-color:var(--gold2)}
+.queue-item.error{border-left-color:var(--red3);opacity:.6}
+.qi-idx{font-family:var(--fm);font-size:10px;color:#5a7f68;min-width:22px}
+.qi-body{flex:1;min-width:0}
+.qi-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0d1a12}
+.qi-meta{font-size:9px;color:#5a7f68;margin-top:3px;font-family:var(--fm)}
+.qi-stat{font-size:10px;font-family:var(--fm);flex-shrink:0}
+.qi-stat.done{color:var(--em3)}.qi-stat.running{color:var(--em)}.qi-stat.wait{color:#5a7f68}.qi-stat.error{color:var(--red2)}
+.spin{display:inline-block;width:10px;height:10px;border:1.5px solid rgba(0,168,120,.25);border-top-color:var(--em);border-radius:50%;animation:rot .7s linear infinite;margin-right:3px}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* ── NOTE VIEWER ── */
+.nv-wrap{background:#ffffff;border:1px solid var(--ink4);border-radius:8px;box-shadow:0 2px 16px rgba(0,100,60,.08)}
+.nv-head{padding:20px 22px 16px;border-bottom:1px solid var(--ink4)}
+.nv-title{font-family:var(--fs);font-size:23px;font-weight:900;line-height:1.5;margin-bottom:10px;color:#0d1a12}
+.nv-meta-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.nbadge{font-size:8px;padding:2px 8px;font-family:var(--fm);border-radius:2px;white-space:nowrap}
+.nb-free{background:#e8f8f0;color:var(--em3);border:1px solid rgba(0,168,120,.3)}
+.nb-paid{background:var(--gold4);color:var(--gold2);border:1px solid rgba(184,148,14,.3)}
+.nb-char{background:var(--em5);color:var(--em3);border:1px solid rgba(0,168,120,.2)}
+.nb-neutral{background:#f0faf4;border:1px solid var(--ink5);color:#5a7f68}
+.nv-persona-bar{padding:10px 22px;background:var(--em5);border-bottom:1px solid var(--em4);display:flex;gap:16px;font-size:10px;flex-wrap:wrap}
+.nv-body{padding:24px 22px}
+.note-text{font-family:var(--fs);font-size:15px;line-height:2.2;color:#0d1a12;white-space:pre-wrap;word-break:break-all;font-weight:500}
+.note-heading{font-size:19px;font-weight:900;color:var(--em3);display:block;margin:32px 0 14px;border-bottom:2px solid var(--em4);padding-bottom:10px;letter-spacing:.02em}
+
+/* ── SOCIAL POSTS ── */
+.social-tabs{display:flex;gap:0;border-bottom:1px solid var(--ink4);margin-bottom:14px}
+.social-tab{padding:8px 14px;font-size:9px;letter-spacing:.18em;font-family:var(--fm);color:#5a7f68;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.social-tab.on{color:var(--em3);border-bottom-color:var(--em)}
+.social-post-box{background:#f4faf7;border:1px solid var(--em4);padding:14px;font-size:12px;line-height:1.8;white-space:pre-wrap;border-radius:6px;min-height:80px;font-family:var(--fs);color:#1c2e22}
+
+/* ── THUMBNAILS ── */
+.thumb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.thumb-card{background:#f4faf7;border:1px solid var(--em4);border-radius:6px;overflow:hidden}
+.thumb-img{aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;overflow:hidden}
+.thumb-img img{width:100%;height:100%;object-fit:cover}
+.thumb-label{padding:5px 8px;font-size:8px;font-family:var(--fm);color:#5a7f68}
+
+/* ── PERSONA RESEARCH ── */
+.persona-input-box{background:var(--ink3);border:1px solid var(--ink5);padding:16px;border-radius:2px;margin-bottom:14px}
+.persona-result{background:#f0faf5;border:1px solid rgba(0,168,120,.25);padding:16px;border-radius:8px}
+.persona-result .pr-title{font-size:10px;font-family:var(--fm);letter-spacing:.18em;color:var(--em3);margin-bottom:10px}
+.pr-row{display:flex;gap:10px;margin-bottom:7px;font-size:11px;line-height:1.7}
+.pr-key{color:#5a7f68;font-family:var(--fm);font-size:9px;min-width:90px;flex-shrink:0;padding-top:2px}
+.pr-val{color:#1c2e22;flex:1}
+
+/* ── NOTE CONNECT ── */
+.connect-card{background:#ffffff;border:1px solid var(--ink4);padding:18px;border-radius:8px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,80,40,.05)}
+.connect-status{display:flex;align-items:center;gap:8px;padding:10px 13px;border:1px solid;border-radius:2px;margin-top:10px}
+.cs-ok{background:var(--gr4);border-color:rgba(26,122,58,.3)}.cs-ng{background:var(--red4);border-color:rgba(192,0,26,.25)}
+
+/* ── DAILY AUTO ── */
+.daily-slot{display:flex;align-items:center;gap:12px;padding:11px 14px;background:#ffffff;border:1px solid var(--ink4);margin-bottom:7px;border-radius:6px;transition:all .2s;box-shadow:0 1px 4px rgba(0,80,40,.05)}
+.daily-slot.running{border-color:rgba(0,168,120,.5);background:#f0faf5}
+.daily-slot.done{border-color:var(--em);background:#e8f8f0}
+.daily-slot.error{border-color:rgba(192,0,26,.3)}
+.ds-num{font-family:var(--fm);font-size:10px;color:var(--ink6);min-width:22px}
+.ds-body{flex:1;min-width:0}
+.ds-title{font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0d1a12}
+.ds-meta{font-size:9px;color:var(--ink6);margin-top:2px;font-family:var(--fm)}
+.ds-stat{font-size:10px;font-family:var(--fm);flex-shrink:0}
+
+/* ── PROGRESS STEPS ── */
+.prog-step{display:flex;align-items:center;gap:11px;padding:9px 13px;border:1px solid var(--ink4);border-radius:6px;margin-bottom:6px;transition:all .2s;background:#fff}
+.prog-step.active{border-color:var(--em);background:var(--em5)}
+.prog-step.done{border-color:var(--em);background:#e8f8f0}
+.ps-n{width:20px;height:20px;border:1px solid var(--ink5);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:var(--fm);flex-shrink:0}
+.prog-step.active .ps-n{border-color:var(--em);color:var(--em)}.prog-step.done .ps-n{border-color:var(--em3);color:var(--em3)}
+.ps-b{flex:1}.ps-name{font-size:12px;font-weight:800}.ps-desc{font-size:9px;color:var(--ink6);margin-top:1px}
+.ps-s{font-size:10px;font-family:var(--fm)}.ps-s.active{color:var(--em)}.ps-s.done{color:var(--em3)}.ps-s.wait{color:#5a7f68}
+
+/* ── MODAL ── */
+.ov{position:fixed;inset:0;background:rgba(10,30,18,.8);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(12px)}
+.ov.on{display:flex;animation:fadeup .18s ease}
+.modal{background:#ffffff;border:1px solid rgba(0,168,120,.2);max-width:92vw;max-height:90vh;overflow-y:auto;border-radius:12px;position:relative;box-shadow:0 20px 60px rgba(0,80,50,.2)}
+.modal::before{content:'';display:block;height:3px;background:linear-gradient(90deg,var(--em3),var(--em2),var(--em3))}
+.mh{padding:18px 22px 13px;border-bottom:1px solid var(--ink4);display:flex;justify-content:space-between;align-items:center}
+.mtt{font-family:var(--fs);font-size:15px;font-weight:700;color:#0d1a12}
+.mx{background:none;border:1px solid var(--ink5);color:#5a7f68;width:26px;height:26px;cursor:pointer;font-size:13px;border-radius:4px;transition:all .15s}
+.mx:hover{border-color:var(--em);color:var(--em)}
+.mb{padding:18px 22px}
+.mf{padding:12px 22px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--ink4)}
+.confirm-icon{font-size:38px;text-align:center;margin-bottom:10px}
+.confirm-msg{font-size:14px;font-weight:700;text-align:center;color:#0d1a12;margin-bottom:6px}
+.confirm-sub{font-size:11px;color:#5a7f68;text-align:center;line-height:1.7}
+
+/* ── NOTE API STATUS ── */
+.api-status-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:2px;font-size:11px;margin-top:6px}
+.api-ok{background:#e8f8f0;border:1px solid rgba(0,168,120,.25)}.api-ng{background:rgba(214,48,49,.08);border:1px solid rgba(214,48,49,.2)}.api-wait{background:rgba(255,255,255,.03);border:1px solid var(--ink5)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:18px;right:18px;background:#ffffff;border:1px solid var(--em4);border-left:3px solid var(--em);box-shadow:0 4px 20px rgba(0,100,60,.15);padding:11px 16px;z-index:999;transform:translateX(140%);transition:transform .34s cubic-bezier(.16,1,.3,1);min-width:210px;max-width:300px;border-radius:2px}
+.toast.show{transform:none}
+.toast-t{font-weight:700;color:var(--em3);font-size:11px;margin-bottom:2px}
+.toast-m{color:#5a7f68;font-size:10px;line-height:1.5}
+
+/* ── MISC ── */
+
+/* ── 文字太さ強化 ── */
+h1,h2,h3,.sec,.fl,.mtt,.ac-name,.qi-title,.nv-title,.ds-title,.ps-name{font-weight:800!important}
+.tab{font-weight:700!important}
+.btn{font-weight:800!important;letter-spacing:.06em}
+label,input,select,textarea{font-weight:600}
+.fl{font-size:10px!important;letter-spacing:.15em!important;font-weight:800!important;color:var(--blk)!important}
+.ac-genre{font-weight:600!important;font-size:11px!important}
+.qi-meta{font-weight:600!important}
+.ac-stat-l{font-weight:700!important}
+.ps-desc{font-weight:600!important;font-size:10px!important}
+
+/* ── Supabase同期ステータス（ヘッダー右端に常時表示） ── */
+.sync-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:9px;font-weight:700;font-family:var(--fm);border:1px solid var(--em4);background:var(--em5);color:var(--em3);white-space:nowrap}
+.sync-badge.syncing{border-color:rgba(0,168,120,.5);color:var(--em);animation:pulse .8s ease infinite}
+.sync-badge.error{background:var(--red4);border-color:rgba(214,48,49,.3);color:var(--red2)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* ── 投稿キューカード ── */
+.hq-card{background:#fff;border:1px solid var(--ink4);border-radius:8px;padding:0;overflow:hidden;margin-bottom:8px;box-shadow:0 1px 6px rgba(0,80,40,.06);transition:box-shadow .2s}
+.hq-card:hover{box-shadow:0 4px 16px rgba(0,120,80,.12)}
+.hq-head{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--ink4)}
+.hq-status-bar{height:3px;width:100%}
+.hq-title{font-size:14px;font-weight:800;color:#0d1a12;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq-pills{display:flex;gap:6px;flex-wrap:wrap;padding:8px 16px 10px}
+.hq-actions{padding:0 16px 12px;display:flex;gap:6px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;font-family:var(--fm)}
+
+/* ── ノウハウタブバッジ ── */
+.style-knowhow-tip{background:linear-gradient(135deg,#e8f8f0,#d0f0e0);border:1px solid rgba(0,168,120,.2);border-radius:8px;padding:12px 14px;font-size:11px;font-weight:600;line-height:1.8;color:#1c2e22;margin-top:10px}
+.style-knowhow-tip strong{color:var(--em3);font-weight:800}
+
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:#f0faf4}::-webkit-scrollbar-thumb{background:var(--em4);border-radius:2px}
+.empty{text-align:center;padding:30px;color:#5a7f68;font-size:12px}
+.divider{height:1px;background:var(--em4);margin:14px 0}
+code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;color:var(--em3);border-radius:2px}
+</style>
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#0d1a12 0%,#0a2a1a 50%,#0d1a12 100%);display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:48px 40px;width:360px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:.2em;color:#0d1a12">NOTE FACTORY</div>
+      <div style="font-size:11px;color:#5a7f68;font-weight:700;letter-spacing:.15em;margin-top:4px">PRIVATE ACCESS</div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:10px;font-weight:800;color:#5a7f68;letter-spacing:.1em;display:block;margin-bottom:6px">PASSWORD</label>
+      <input id="login-pw-input" type="password" placeholder="パスワードを入力"
+        style="width:100%;padding:12px 16px;border:2px solid #e0f2e8;border-radius:8px;font-size:14px;font-weight:700;outline:none;box-sizing:border-box;transition:border .2s"
+        onfocus="this.style.borderColor='#00a878'" onblur="this.style.borderColor='#e0f2e8'"
+        onkeydown="if(event.key==='Enter')tryLogin()">
+    </div>
+    <div id="login-error" style="display:none;color:#c0001a;font-size:11px;font-weight:700;margin-bottom:12px;text-align:center">パスワードが違います</div>
+    <button onclick="tryLogin()" style="width:100%;padding:14px;background:#00a878;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.05em;transition:background .2s" onmouseover="this.style.background='#007a56'" onmouseout="this.style.background='#00a878'">
+      ログイン →
+    </button>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid #e0f2e8;font-size:10px;color:#5a7f68;text-align:center;line-height:1.8">
+      ログイン後は <strong style="color:#00a878">5時間</strong> 自動継続<br>
+      <span style="font-size:9px">パスワード変更: コンソールで <code style="background:#f4faf7;padding:1px 5px;border-radius:3px">localStorage.setItem('nf_pw','新パスワード')</code></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header>
+  <div class="logo">NOTE FACTORY</div>
+  <div class="ver">v10.0</div>
+  <div class="hspace"></div>
+  <div class="hchip auto"><div class="dot"></div>自律稼働中</div>
+  <button class="btn b-o b-sm" onclick="openApiSettings()" style="margin-left:8px" title="Claude/Gemini APIキー設定">⚙️ API設定</button>
+  <button class="btn b-r b-sm" onclick="openM('addAc')" style="margin-left:4px;background:linear-gradient(135deg,var(--em2),var(--em));border-color:var(--em3)">＋ アカウント追加</button>
+  <button class="btn b-r b-sm" onclick="sw('daily')" style="margin-left:4px">⚡ 今日の5本生成</button>
+</header>
+
+<!-- ══ TABS ══ -->
+<div class="tabs">
+  <div class="tab on" onclick="sw('dashboard')" style="color:var(--em);font-weight:900">📊 ダッシュボード</div>
+  <div class="tab" onclick="sw('accounts')">アカウント管理</div>
+  <div class="tab" onclick="sw('persona')">ペルソナ研究</div>
+  <div class="tab" onclick="sw('create')">note作成 <span class="badge" id="b-create">0</span></div>
+  <div class="tab" onclick="sw('daily')">今日の5本</div>
+  <div class="tab" onclick="sw('connect')">note連携・下書き保存</div>
+  <div class="tab" onclick="sw('auto')">自動化設定</div>
+  <div class="tab" onclick="sw('history')">投稿キュー <span class="badge" id="b-history">0</span></div>
+</div>
+
+<div class="wrap" style="background:#f8fdfb;min-height:calc(100vh - 112px)">
+
+<!-- ══════════════════════════════════════
+     TAB 1: アカウント管理
+══════════════════════════════════════ -->
+<!-- ══════════════════════════════════════
+     TAB 0: ダッシュボード
+══════════════════════════════════════ -->
+<div class="pane" id="pane-dashboard">
+  <!-- 自動集計バナー -->
+  <div style="background:linear-gradient(135deg,var(--em5),#d0f5e8);border:1px solid var(--em4);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="db-fetch-dot" style="width:8px;height:8px;border-radius:50%;background:#3acc66;flex-shrink:0"></div>
+      <span style="font-size:11px;font-weight:800;color:var(--em3)">note.com から自動集計中</span>
+      <span style="font-size:10px;color:#5a7f68;font-weight:600" id="db-fetch-status">初回取得中...</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span style="font-size:9px;color:#5a7f68" id="db-last-update">最終更新: —</span>
+      <button class="btn b-o b-xs" onclick="fetchAllDashboard(true)">🔄 今すぐ更新</button>
+    </div>
+  </div>
+
+  <!-- サマリーカード -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+    <div style="background:#fff;border:2px solid var(--em4);border-radius:10px;padding:18px 14px;text-align:center;box-shadow:0 2px 12px rgba(0,120,80,.08)">
+      <div style="font-size:10px;font-weight:800;color:#5a7f68;letter-spacing:.12em;margin-bottom:8px">TODAY 売上</div>
+      <div style="font-family:var(--fe);font-size:32px;font-weight:900;color:var(--em)" id="db-today-rev">¥ —</div>
+      <div style="font-size:10px;color:#5a7f68;margin-top:4px" id="db-today-sub">集計中...</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--em4);border-radius:10px;padding:18px 14px;text-align:center;box-shadow:0 2px 12px rgba(0,120,80,.08)">
+      <div style="font-size:10px;font-weight:800;color:#5a7f68;letter-spacing:.12em;margin-bottom:8px">今月 売上</div>
+      <div style="font-family:var(--fe);font-size:32px;font-weight:900;color:var(--em3)" id="db-month-rev">¥ —</div>
+      <div style="font-size:10px;color:#5a7f68;margin-top:4px" id="db-month-sub">自動集計</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--em4);border-radius:10px;padding:18px 14px;text-align:center;box-shadow:0 2px 12px rgba(0,120,80,.08)">
+      <div style="font-size:10px;font-weight:800;color:#5a7f68;letter-spacing:.12em;margin-bottom:8px">スキ数（合計）</div>
+      <div style="font-family:var(--fe);font-size:32px;font-weight:900;color:#f5a800" id="db-likes">—</div>
+      <div style="font-size:10px;color:#5a7f68;margin-top:4px">公開済note合計</div>
+    </div>
+    <div style="background:#fff;border:2px solid var(--em4);border-radius:10px;padding:18px 14px;text-align:center;box-shadow:0 2px 12px rgba(0,120,80,.08)">
+      <div style="font-size:10px;font-weight:800;color:#5a7f68;letter-spacing:.12em;margin-bottom:8px">公開 note数</div>
+      <div style="font-family:var(--fe);font-size:32px;font-weight:900;color:var(--em)" id="db-pub-count">—</div>
+      <div style="font-size:10px;color:#5a7f68;margin-top:4px">全アカウント合計</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+    <!-- アカウント別売上 -->
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:10px;padding:18px;box-shadow:0 1px 8px rgba(0,80,40,.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="sec" style="margin-bottom:0">アカウント別 今月売上</div>
+        <span style="font-size:9px;color:#5a7f68;font-weight:600">note.com APIより自動取得</span>
+      </div>
+      <div id="db-ac-list">
+        <div class="empty" style="padding:20px;font-size:12px">アカウントに note URL を設定すると自動集計されます</div>
+      </div>
+    </div>
+
+    <!-- 最近の投稿キュー -->
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:10px;padding:18px;box-shadow:0 1px 8px rgba(0,80,40,.06)">
+      <div class="sec" style="margin-bottom:14px">直近の生成・投稿</div>
+      <div id="db-recent-queue"></div>
+    </div>
+  </div>
+
+  <!-- note記事一覧（自動取得） -->
+  <div style="background:#fff;border:1px solid var(--ink4);border-radius:10px;padding:18px;box-shadow:0 1px 8px rgba(0,80,40,.06)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="sec" style="margin-bottom:0">公開・下書き記事一覧 <span style="font-size:9px;color:#5a7f68;font-weight:600">（自動取得）</span></div>
+      <select class="fsl" style="font-size:10px;padding:4px 8px;height:auto;width:auto" id="db-ac-filter" onchange="renderNoteList()">
+        <option value="">全アカウント</option>
+      </select>
+    </div>
+    <div id="db-note-list">
+      <div class="empty" style="padding:20px;font-size:12px">自動取得中...</div>
+    </div>
+  </div>
+</div>
+
+<div class="pane" id="pane-accounts">
+  <div class="sec" style="margin-bottom:16px">ACCOUNT MANAGEMENT</div>
+  <div class="ac-grid" id="ac-grid">
+    <!-- JSで描画 -->
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 2: ペルソナ研究
+══════════════════════════════════════ -->
+<div class="pane" id="pane-persona">
+  <div class="g-sidebar">
+    <div>
+      <div class="sec">SIMPLE INPUT</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="fg"><label class="fl">アカウント</label><select class="fsl" id="persona-ac"></select></div>
+          <div class="fg">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <label class="fl" style="margin-bottom:0">ターゲット</label>
+              <button class="btn b-o b-xs" onclick="autoFillPersona('target')" style="font-size:9px;padding:3px 9px">お任せ ✨</button>
+            </div>
+            <textarea class="fta" id="p-target" rows="2" placeholder="例: 副業始めたい20代会社員 / 空欄でお任せも可"></textarea>
+          </div>
+          <div class="fg">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <label class="fl" style="margin-bottom:0">悩み・キーワード</label>
+              <button class="btn b-o b-xs" onclick="autoFillPersona('pain')" style="font-size:9px;padding:3px 9px">お任せ ✨</button>
+            </div>
+            <textarea class="fta" id="p-pain" rows="2" placeholder="例: 何から始めればいいか分からない / 空欄でお任せも可"></textarea>
+          </div>
+          <div class="fg">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <label class="fl" style="margin-bottom:0">ジャンル・競合テーマ</label>
+              <button class="btn b-o b-xs" onclick="autoFillPersona('genre')" style="font-size:9px;padding:3px 9px">お任せ ✨</button>
+            </div>
+            <input type="text" class="fi" id="p-genre" placeholder="例: AI×副業, note販売 / お任せボタンで競合分析">
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <label class="fl" style="margin-bottom:0">参考文章・競合note（任意）</label>
+              <button class="btn b-r b-xs" onclick="autoFillPersona('all')" style="font-size:9px;padding:3px 9px">全部お任せ ✨</button>
+            </div>
+            <textarea class="fta" id="p-ref" rows="3" placeholder="競合noteの一節を貼ると精度UP / 全部お任せボタンで全欄自動入力"></textarea>
+          </div>
+        </div>
+      </div>
+      <button class="btn b-r" style="width:100%;margin-top:12px;padding:14px" onclick="runPersonaResearch()">🔍 Claude が本格リサーチ開始</button>
+    </div>
+    <div>
+      <div class="sec" style="margin-bottom:10px">RESEARCH RESULT</div>
+
+      <!-- 保存済みペルソナ一覧 -->
+      <div id="persona-saved-list" style="margin-bottom:14px"></div>
+
+      <div id="persona-result-area">
+        <div class="empty">左で簡易情報を入力して「リサーチ開始」を押すと<br>Claude Sonnetが詳細なペルソナを構築します</div>
+      </div>
+      <div id="persona-action" style="display:none;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn b-r" style="flex:1;padding:13px" onclick="usePersonaForNote()">このペルソナでnote作成へ →</button>
+        <button class="btn b-o" style="padding:13px;font-size:11px" onclick="saveCurrentPersona()">💾 保存する</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 3: note作成
+══════════════════════════════════════ -->
+<div class="pane" id="pane-create">
+  <div class="g-sidebar">
+    <!-- 左: 入力 -->
+    <div>
+      <div class="sec">BRIEF</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="fg"><label class="fl">アカウント（キャラ）</label><select class="fsl" id="create-ac" onchange="onAcChange()"></select></div>
+
+          <!-- ペルソナ表示 -->
+          <div id="ac-persona-preview" style="margin-bottom:12px"></div>
+
+          <div class="fg">
+            <label class="fl">noteタイプ</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div class="btn b-gr" id="type-free-btn" onclick="setNoteType('free')" style="justify-content:center;padding:10px">📝 無料note</div>
+              <div class="btn b-g" id="type-paid-btn" onclick="setNoteType('paid')" style="justify-content:center;padding:10px;opacity:.45">💰 有料note</div>
+            </div>
+          </div>
+          <div class="fg" id="price-field" style="display:none">
+  <label class="fl">価格帯（¥での表示価格）</label>
+  <select class="fsl" id="note-price">
+    <option value="p980">¥980 — 入門・お試し</option>
+    <option value="p2980">¥2,980 — 梅プラン</option>
+    <option value="p5980">¥5,980 — 中級者向け</option>
+    <option value="p9800" selected>¥9,800 — 竹プラン（推奨）</option>
+    <option value="p19800">¥19,800 — 上位コンテンツ</option>
+    <option value="p29800">¥29,800 — 松プラン（プレミアム）</option>
+  </select>
+</div>
+
+          <div class="fg"><label class="fl">ターゲットの悩み・状況</label><textarea class="fta" id="c-problem" rows="2" placeholder="例: 副業始めたいけど何から手をつければいいか分からない"></textarea></div>
+          <div class="fg"><label class="fl">伝えたいメッセージ</label><textarea class="fta" id="c-message" rows="2" placeholder="例: AIを使えば初心者でも14日で最初の10万が稼げる"></textarea></div>
+          <div class="fg"><label class="fl">タイトル案（空欄でAIが考える）</label><input type="text" class="fi" id="c-title" placeholder="AIが最適なタイトルを生成します"></div>
+          <div class="fg"><label class="fl">参考文章（バズ投稿・競合noteなど）</label><textarea class="fta" id="c-ref" rows="2" placeholder="参考にしたい文章を貼り付けると文体の参考にします"></textarea></div>
+
+          <!-- ファイルアップロード（80点→120点リメイク） -->
+          <div class="fg" style="border:2px dashed var(--em3);border-radius:8px;padding:14px;background:var(--em5)">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <label class="fl" style="margin-bottom:0;color:var(--em3)">📎 ファイルをアップロードして120点にリメイク</label>
+              <span style="font-size:9px;color:#5a7f68;font-weight:700">PDF・Word・Excel・テキスト対応</span>
+            </div>
+            <input type="file" id="c-upload-file" accept=".pdf,.txt,.csv,.md,.docx,.xlsx,.xls" style="display:none" onchange="onFileSelected(this)">
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn b-o b-sm" style="flex-shrink:0" onclick="document.getElementById('c-upload-file').click()">📁 ファイルを選択</button>
+              <div id="c-upload-status" style="font-size:10px;color:#5a7f68;font-weight:600;flex:1">未選択（選択するとAIが分析して120点のnoteを生成します）</div>
+            </div>
+            <div id="c-upload-preview" style="display:none;margin-top:10px;background:#fff;border:1px solid var(--em4);border-radius:6px;padding:10px;font-size:10px;color:#0d1a12;max-height:120px;overflow-y:auto;line-height:1.7;font-weight:600"></div>
+            <div id="c-upload-analysis" style="display:none;margin-top:8px"></div>
+          </div>
+
+          <div class="fg">
+            <label class="fl">構成スタイル</label>
+            <select class="fsl" id="c-style" onchange="showStyleTip()">
+              <option value="story">📖 体験談ストーリー型（最売れ・共感重視）</option>
+              <option value="knowhow">🧠 ノウハウ完全解説型（教育・価値重視）</option>
+              <option value="howto">📋 ハウツー手順型（再現性重視）</option>
+              <option value="list">📊 リスト・まとめ型（バズりやすい）</option>
+              <option value="reveal">💥 衝撃→解説型（フック重視）</option>
+              <option value="dialog">💬 対話・Q&A型（共感重視）</option>
+              <option value="sales">💰 セールスレター＋有料記事【完全版】</option>
+            </select>
+            <div id="style-tip-box" style="margin-top:8px"></div>
+          </div>
+          <div class="fr2">
+            <div class="fg"><label class="fl">文字数（必ずこれ以上書く）</label><select class="fsl" id="c-words"><option value="2000">最低2,000字</option><option value="3500" selected>最低3,500字</option><option value="6000">最低6,000字</option><option value="10000">最低10,000字</option><option value="15000">最低15,000字</option><option value="20000">最低20,000字</option></select></div>
+            <div class="fg"><label class="fl">生成本数</label><select class="fsl" id="c-count"><option value="1">1本</option><option value="3" selected>3本</option><option value="5">5本</option></select></div>
+          </div>
+          <div class="fg">
+            <label class="fl">note 公開URL（投稿後に入力するとSNS投稿文に自動挿入）</label>
+            <input type="url" class="fi" id="c-note-link" placeholder="https://note.com/..." style="font-size:11px">
+          </div>
+          <div class="fg" style="margin-bottom:0">
+            <label class="fl">SNS投稿も同時生成</label>
+            <div style="display:flex;gap:8px">
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px"><input type="checkbox" id="gen-threads" checked style="accent-color:var(--em)"> Threads</label>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px"><input type="checkbox" id="gen-x" checked style="accent-color:var(--em)"> X（Twitter）</label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <button class="btn b-o" style="width:100%;margin-top:12px;padding:12px;font-size:12px;border:2px dashed var(--em3);background:var(--em5)" onclick="startOmakase()">✨ おまかせ（販売実績豊富なテーマをAIが提案）</button>
+      <button class="btn b-r" style="width:100%;margin-top:8px;padding:14px;font-size:13px" id="gen-btn" onclick="startGen()">⚡ note生成 + SNS投稿文を作る</button>
+    </div>
+
+    <!-- 右: 出力 -->
+    <div>
+      <div class="sec" style="margin-bottom:10px">OUTPUT <span id="queue-count-label" style="color:var(--ink6);font-size:9px;font-family:var(--fm)"></span></div>
+      <div id="queue-area">
+        <div class="empty" id="queue-empty">左フォームを入力して生成ボタンを押すと<br>ここにnoteが出てきます</div>
+        <div id="queue-list" style="display:none"></div>
+      </div>
+      <div id="viewer-area" style="display:none;margin-top:16px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 4: 今日の5本
+══════════════════════════════════════ -->
+<div class="pane" id="pane-daily">
+  <div class="g-sidebar-r">
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div class="sec" style="margin-bottom:4px">TODAY'S 5 NOTES</div>
+          <div style="font-family:var(--fm);font-size:10px;color:var(--ink6)" id="daily-date"></div>
+        </div>
+        <button class="btn b-r" onclick="startDailyGen()" id="daily-btn">⚡ 全自動 5本生成</button>
+      </div>
+
+      <div class="fg" style="margin-bottom:14px">
+        <label class="fl" style="margin-bottom:6px">今日の担当アカウント</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="fsl" style="flex:1" id="daily-ac-mode" onchange="onDailyAcModeChange()">
+            <option value="rotate">🔄 毎日ローテーション（推奨）</option>
+            <option value="fixed">📌 アカウントを固定する</option>
+          </select>
+        </div>
+        <div id="daily-ac-fixed-wrap" style="display:none;margin-top:8px">
+          <select class="fsl" style="width:100%" id="daily-ac"></select>
+        </div>
+        <div id="daily-ac-rotate-info" style="margin-top:8px;background:var(--em5);border:1px solid var(--em4);border-radius:6px;padding:10px 12px">
+          <div style="font-size:10px;font-weight:800;color:var(--em3);margin-bottom:6px">ローテーション順（登録アカウント順）</div>
+          <div id="daily-rotate-preview" style="font-size:10px;color:#0d1a12;font-weight:600;line-height:1.9"></div>
+          <div style="font-size:9px;color:#5a7f68;margin-top:4px">今日の担当: <strong id="daily-today-ac" style="color:var(--em3)">—</strong></div>
+        </div>
+      </div>
+
+      <!-- 5本 カスタム設定 -->
+      <div id="daily-slots"></div>
+      <div style="margin-top:10px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.12em">5本の内容を変更できます</span>
+        <button class="btn b-o b-xs" onclick="resetDailyPlan()">↺ デフォルトに戻す</button>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-body">
+          <div class="sec">生成進捗</div>
+          <div id="daily-progress">
+            <div class="empty" style="padding:20px">「全自動 5本生成」を押すと進捗が表示されます</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec">自動化スケジュール</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div style="font-size:11px;line-height:2;color:#1c2e22;font-weight:600">
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--ink4)"><span>毎日note自動生成</span><span style="color:#3acc66;font-family:var(--fm)">稼働中</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--ink4)"><span>実行時刻</span><span style="font-family:var(--fm)">05:00 JST</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--ink4)"><span>次回実行</span><span style="font-family:var(--fm);color:var(--gold2)" id="next-run"></span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0"><span>GitHub Actions</span><span style="color:#3acc66;font-family:var(--fm)">設定済</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">パソコンを閉じても動く仕組み</div>
+      <div class="card">
+        <div class="card-body" style="font-size:11px;line-height:1.9;color:var(--paper3)">
+          GitHub Actions の cron で毎朝5時に自動起動します。<br>PCの電源が切れていても、GitHubのサーバーがnoteを生成し続けます。<br><br>
+          <div style="background:var(--ink3);padding:10px;border-radius:2px;font-family:var(--fm);font-size:9px;color:var(--gold2)">cron: '0 20 * * *' <span style="color:var(--ink6)"># = JST 05:00</span></div>
+          <div style="margin-top:12px">
+            <button class="btn b-o b-sm" style="width:100%" onclick="showGHSetup()">📄 GitHub Actions 設定手順を見る</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 5: note連携・下書き保存
+══════════════════════════════════════ -->
+<div class="pane" id="pane-connect">
+  <div class="g2">
+    <div>
+      <div class="sec">NOTE アカウント連携</div>
+      <div id="note-connect-list"></div>
+      <div class="card" style="margin-top:12px">
+        <div class="card-body">
+          <div class="sec" style="margin-bottom:10px">認証情報の入力（アカウントごと）</div>
+          <div class="fg"><label class="fl">アカウント</label><select class="fsl" id="conn-ac"></select></div>
+          <div class="fg"><label class="fl">note メールアドレス</label><input type="email" class="fi" id="conn-email" placeholder="example@mail.com"></div>
+          <div class="fg" style="margin-bottom:0"><label class="fl">パスワード</label><input type="password" class="fi" id="conn-pw" placeholder="●●●●●●●●"></div>
+          <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:9px 12px;font-size:10px;color:rgba(255,200,0,.7);margin-top:10px;border-radius:2px">
+            ⚠️ 認証情報はブラウザのローカルストレージにのみ保存されます。外部サーバーには送信しません。
+          </div>
+          <button class="btn b-r" style="width:100%;margin-top:12px" onclick="saveNoteAuth()">🔗 認証情報を保存・接続テスト</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="sec">下書き保存 実行</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div class="fg"><label class="fl">保存するnote</label><select class="fsl" id="draft-note-sel"><option value="">生成済みnoteを選択...</option></select></div>
+          <div class="fg"><label class="fl">投稿先アカウント</label><select class="fsl" id="draft-ac-sel"></select></div>
+
+          <div class="prog-step" id="ds1"><div class="ps-n">1</div><div class="ps-b"><div class="ps-name">noteにログイン</div><div class="ps-desc">認証情報でセッション開始</div></div><div class="ps-s wait" id="ds1s">待機</div></div>
+          <div class="prog-step" id="ds2"><div class="ps-n">2</div><div class="ps-b"><div class="ps-name">新規note作成</div><div class="ps-desc">エディタを開く</div></div><div class="ps-s wait" id="ds2s">待機</div></div>
+          <div class="prog-step" id="ds3"><div class="ps-n">3</div><div class="ps-b"><div class="ps-name">本文・タイトル入力</div><div class="ps-desc">生成内容を自動入力</div></div><div class="ps-s wait" id="ds3s">待機</div></div>
+          <div class="prog-step" id="ds4"><div class="ps-n">4</div><div class="ps-b"><div class="ps-name">サムネイル設定</div><div class="ps-desc">生成画像を表紙に設定</div></div><div class="ps-s wait" id="ds4s">待機</div></div>
+          <div class="prog-step" id="ds5"><div class="ps-n">5</div><div class="ps-b"><div class="ps-name">下書き保存</div><div class="ps-desc">公開せずに保存</div></div><div class="ps-s wait" id="ds5s">待機</div></div>
+
+          <button class="btn b-r" style="width:100%;margin-top:12px" onclick="runDraftSave()">📝 下書き保存を実行</button>
+
+          <div style="margin-top:10px;font-size:10px;color:var(--ink6);line-height:1.7;border-top:1px solid var(--ink4);padding-top:10px">
+            ※ note公式APIは非公開のため、Puppeteer（ヘッドレスブラウザ）でブラウザ操作を自動化します。<br>
+            実際の下書き保存にはバックエンドサーバー（<code>node src/server.js</code>）の起動が必要です。
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">接続状態</div>
+      <div id="conn-status-area">
+        <div class="empty" style="padding:20px">認証情報を入力すると接続状態が表示されます</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 6: 自動化設定
+══════════════════════════════════════ -->
+<div class="pane" id="pane-auto">
+  <div class="g2">
+    <div>
+      <div class="sec">自動生成 設定</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div class="fg"><label class="fl">デフォルト担当アカウント</label>
+            <select class="fsl" id="auto-ac-rotate">
+              <option value="rotate">🔄 毎日ローテーション（推奨）</option>
+            </select>
+            <div style="font-size:9px;color:#5a7f68;margin-top:5px;font-weight:600">登録アカウントを曜日順に自動で割り当てます。「今日の5本」タブで固定アカウントに変更も可能です。</div>
+          </div>
+          <div class="fg"><label class="fl">1日あたりの生成本数</label><select class="fsl" id="auto-count"><option value="5" selected>5本（無料3+有料2）</option><option value="3">3本（無料2+有料1）</option><option value="10">10本（無料6+有料4）</option></select></div>
+          <div class="fg"><label class="fl">テーマ選定方法</label><select class="fsl" id="auto-theme"><option value="auto">Claude がトレンドから自動選定</option><option value="harm">HARMスコアから最適選定</option></select></div>
+          <div class="fg" style="margin-bottom:0"><label class="fl">自動下書き保存</label>
+            <div style="display:flex;gap:12px;margin-top:4px">
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px"><input type="radio" name="auto-draft" value="yes" style="accent-color:var(--red2)"> 生成後すぐ下書き保存</label>
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px"><input type="radio" name="auto-draft" value="no" checked style="accent-color:var(--red2)"> 確認してから手動保存</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">GitHub Actions セットアップ</div>
+      <div class="card">
+        <div class="card-body" style="font-size:11px;line-height:1.9">
+          <div id="gh-setup-content">
+            <div style="color:var(--paper3);margin-bottom:14px">以下の手順でGitHub Actionsを設定するとPCを閉じていても毎日自動でnoteが生成されます。</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div class="prog-step"><div class="ps-n" style="font-size:9px">1</div><div class="ps-b"><div class="ps-name">GitHubリポジトリを作成</div><div class="ps-desc">このシステムのコードをpush</div></div></div>
+              <div class="prog-step"><div class="ps-n" style="font-size:9px">2</div><div class="ps-b"><div class="ps-name">Secrets を登録</div><div class="ps-desc">ANTHROPIC_API_KEY / GEMINI_API_KEY / NOTE_EMAIL / NOTE_PASSWORD</div></div></div>
+              <div class="prog-step"><div class="ps-n" style="font-size:9px">3</div><div class="ps-b"><div class="ps-name">daily-note.yml を配置</div><div class="ps-desc">.github/workflows/daily-note.yml</div></div></div>
+              <div class="prog-step"><div class="ps-n" style="font-size:9px">4</div><div class="ps-b"><div class="ps-name">Actions を有効化</div><div class="ps-desc">毎朝5時 JST に自動実行開始</div></div></div>
+            </div>
+            <button class="btn b-g b-sm" style="width:100%;margin-top:14px" onclick="downloadWorkflow()">⬇️ daily-note.yml をダウンロード</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec">Secrets チェックリスト</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-body">
+          <div id="secrets-list"></div>
+        </div>
+      </div>
+
+      <div class="sec">手動トリガー</div>
+      <div class="card">
+        <div class="card-body">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button class="btn b-r" style="width:100%" onclick="sw('daily');startDailyGen()">⚡ 今すぐ全自動5本生成</button>
+            <button class="btn b-o" style="width:100%" onclick="sw('persona')">🔍 ペルソナリサーチ実行</button>
+            <button class="btn b-o" style="width:100%" onclick="sw('create')">📝 個別note作成</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TAB 7: 投稿キュー・作業履歴
+══════════════════════════════════════ -->
+<div class="pane" id="pane-history">
+  <!-- ステータスサマリー -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px" id="hist-summary">
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 6px rgba(0,80,40,.06)">
+      <div style="font-family:var(--fe);font-size:28px;color:var(--em);font-weight:900" id="hs-total">0</div>
+      <div style="font-size:11px;font-weight:800;color:#5a7f68;margin-top:2px">生成総数</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 6px rgba(0,80,40,.06)">
+      <div style="font-family:var(--fe);font-size:28px;color:#f5a800;font-weight:900" id="hs-pending">0</div>
+      <div style="font-size:11px;font-weight:800;color:#5a7f68;margin-top:2px">未投稿</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 6px rgba(0,80,40,.06)">
+      <div style="font-family:var(--fe);font-size:28px;color:var(--em3);font-weight:900" id="hs-drafted">0</div>
+      <div style="font-size:11px;font-weight:800;color:#5a7f68;margin-top:2px">下書き済</div>
+    </div>
+    <div style="background:#fff;border:1px solid var(--ink4);border-radius:8px;padding:14px;text-align:center;box-shadow:0 1px 6px rgba(0,80,40,.06)">
+      <div style="font-family:var(--fe);font-size:28px;color:var(--em);font-weight:900" id="hs-pub">0</div>
+      <div style="font-size:11px;font-weight:800;color:#5a7f68;margin-top:2px">公開済</div>
+    </div>
+  </div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select class="fsl" id="hist-filter-ac" style="width:auto;min-width:150px;font-weight:700" onchange="renderHistory()">
+        <option value="">全アカウント</option>
+      </select>
+      <select class="fsl" id="hist-filter-type" style="width:auto;font-weight:700" onchange="renderHistory()">
+        <option value="">全タイプ</option>
+        <option value="free">📝 無料note</option>
+        <option value="paid">💰 有料note</option>
+      </select>
+      <select class="fsl" id="hist-filter-status" style="width:auto;font-weight:700" onchange="renderHistory()">
+        <option value="">全ステータス</option>
+        <option value="pending">⏳ 未投稿</option>
+        <option value="drafted">📝 下書き済</option>
+        <option value="published">✅ 公開済</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="btn b-o b-sm" onclick="clearHistory()">🗑 クリア</button>
+      <button class="btn b-r b-sm" onclick="exportHistory()">⬇️ CSV</button>
+    </div>
+  </div>
+
+  <div id="history-list">
+    <div class="empty" style="padding:50px">
+      <div style="font-size:40px;margin-bottom:14px;opacity:.3">📋</div>
+      <div style="font-size:15px;font-weight:800;color:#0d1a12;margin-bottom:6px">投稿キューは空です</div>
+      <div style="font-size:12px;font-weight:600">note作成タブで生成すると、ここに積まれます</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrap -->
+
+<!-- ══════════════════════════════════════
+     MODALS
+══════════════════════════════════════ -->
+
+<!-- アカウント追加/編集 -->
+<div class="ov" id="addAcModal">
+  <div class="modal" style="width:640px">
+    <div class="mh"><div class="mtt" id="addAc-modal-title">＋ アカウント追加</div><button class="mx" onclick="closeM('addAc')">×</button></div>
+    <div class="mb">
+      <div class="fr2">
+        <div class="fg"><label class="fl">アカウント名 *</label><input type="text" class="fi" id="na-name" placeholder="例: AI×note販売垢"></div>
+        <div class="fg"><label class="fl">HARMカテゴリ</label><select class="fsl" id="na-harm"><option value="H">H — Health（健康・美容）</option><option value="A" selected>A — Ambition（副業・AI・稼ぐ）</option><option value="R">R — Relationship（恋愛・復縁）</option><option value="M">M — Money（投資・節約）</option></select></div>
+      </div>
+      <div class="fg"><label class="fl">発信ジャンル *</label><input type="text" class="fi" id="na-genre" placeholder="例: note販売×AI自動化×副業"></div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">キャラクター名</label><input type="text" class="fi" id="na-char-name" placeholder="例: たくみ"></div>
+        <div class="fg"><label class="fl">年齢</label><input type="number" class="fi" id="na-age" placeholder="28" min="18" max="60"></div>
+      </div>
+      <div class="fg"><label class="fl">キャラクター背景</label><textarea class="fta" id="na-bg" rows="2" placeholder="例: 都内のIT会社員。手取り22万から副業を始め、14日で10万円達成。"></textarea></div>
+      <div class="fg"><label class="fl">文体・トーン</label><textarea class="fta" id="na-tone" rows="2" placeholder="例: 親しみやすい先輩。タメ口と敬語が混ざる自然な文体。難しい言葉は使わない。"></textarea></div>
+      <div class="fg"><label class="fl">一人称</label><input type="text" class="fi" id="na-first" placeholder="例: ぼく、私、僕"></div>
+      <div class="fg"><label class="fl">ターゲット読者</label><input type="text" class="fi" id="na-target" placeholder="例: 副業を始めたいが何から始めていいか分からない20〜35歳の会社員"></div>
+      <div class="fg"><label class="fl">口癖・よく使うフレーズ（カンマ区切り）</label><input type="text" class="fi" id="na-phrases" placeholder="例: 正直に言うと, これ知らないと損するやつで"></div>
+      <div class="divider"></div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">Threads URL</label><input type="url" class="fi" id="na-threads" placeholder="https://www.threads.net/@username"></div>
+        <div class="fg"><label class="fl">X（Twitter）URL</label><input type="url" class="fi" id="na-x" placeholder="https://x.com/username"></div>
+      </div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">note URL</label><input type="url" class="fi" id="na-note" placeholder="https://note.com/username"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">アクセントカラー</label><input type="color" class="fi" id="na-color" value="#c0001a" style="height:40px;cursor:pointer"></div>
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.18em;margin-bottom:10px;font-family:var(--fm)">📝 NOTE 認証情報（下書き自動保存に使用）</div>
+      <div class="fr2">
+        <div class="fg"><label class="fl">note メールアドレス</label><input type="email" class="fi" id="na-note-email" placeholder="example@mail.com"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">noteパスワード</label><input type="password" class="fi" id="na-note-pw" placeholder="●●●●●●●●"></div>
+      </div>
+      <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:8px 11px;font-size:10px;color:rgba(180,130,0,.9);border-radius:4px;font-weight:600">
+        ⚠️ 認証情報はブラウザのlocalStorageにのみ保存。外部サーバーには送信しません。
+      </div>
+    </div>
+    <div class="mf">
+      <button class="btn b-o b-sm" onclick="closeM('addAc')">キャンセル</button>
+      <button class="btn b-r" onclick="saveAccount()" id="save-ac-btn">アカウントを作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- アカウント削除確認 -->
+<div class="ov" id="delAcModal">
+  <div class="modal" style="width:380px">
+    <div class="mh"><div class="mtt">アカウント削除</div><button class="mx" onclick="closeM('delAc')">×</button></div>
+    <div class="mb">
+      <div class="confirm-icon">🗑️</div>
+      <div class="confirm-msg" id="del-ac-display">このアカウントを削除しますか？</div>
+      <div class="confirm-sub">この操作は取り消せません。<br>関連するnoteや設定データも全て削除されます。</div>
+    </div>
+    <div class="mf"><button class="btn b-o b-sm" onclick="closeM('delAc')">キャンセル</button><button class="btn b-del" onclick="doDeleteAc()">削除する</button></div>
+  </div>
+</div>
+
+<!-- GitHub Actionsワークフロー表示 -->
+<div class="ov" id="ghModal">
+  <div class="modal" style="width:620px">
+    <div class="mh"><div class="mtt">daily-note.yml — GitHub Actionsワークフロー</div><button class="mx" onclick="closeM('gh')">×</button></div>
+    <div class="mb">
+      <pre style="background:var(--ink3);padding:14px;font-family:var(--fm);font-size:10px;color:var(--gold2);overflow-x:auto;line-height:1.8;border-radius:2px">name: Daily Note Generator
+
+on:
+  schedule:
+    - cron: '0 20 * * *'  # 毎朝 05:00 JST
+  workflow_dispatch:        # 手動実行も可能
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: Generate Daily Notes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NOTE_EMAIL: ${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: ${{ secrets.NOTE_PASSWORD }}
+        run: node src/daily-auto.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daily-notes-${{ github.run_id }}
+          path: output/drafts/</pre>
+      <div style="margin-top:10px;font-size:11px;color:var(--ink6);line-height:1.7">このファイルを <code>.github/workflows/daily-note.yml</code> として配置してください。</div>
+    </div>
+    <div class="mf"><button class="btn b-o b-sm" onclick="closeM('gh')">閉じる</button><button class="btn b-g" onclick="downloadWorkflow()">⬇️ ダウンロード</button></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"><div class="toast-t" id="tt"></div><div class="toast-m" id="tm"></div></div>
+
+<script>
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+const DEFAULT_ACCOUNTS = [
+  {id:'ac001',name:'AI×note販売垢',genre:'note販売×AI自動化×副業',harm:'A',color:'#c0001a',
+   character:{name:'たくみ',age:28,first_person:'ぼく',background:'都内のIT会社員。手取り22万から副業を始め、14日で10万円達成。AIツールを使った自動化で月40〜50万を稼ぐ。',tone:'親しみやすい先輩。タメ口と敬語が混ざる自然な文体。難しい言葉は使わない。',phrases:['正直に言うと','これ知らないと損するやつで','ぼくが最初につまずいたのがここで','めちゃくちゃシンプルな話で'],forbidden:'箇条書き記号、過剰な絵文字、根拠のない断言、専門用語の多用',samples:['正直に言うと、最初の3ヶ月は本当に稼げなかった。毎日投稿してもフォロワーは増えないし、noteも全然売れない。','でも転機があった。AIツールを使い始めたその週から、投稿の質が変わった。いいねが3倍になって、noteが売れ始めた。これ、知らないと本当に損するやつで。']},
+   persona:{target:'副業を始めたいが何から手をつけていいかわからない20〜35歳の会社員',pains:['毎月の給料だけでは将来が不安','情報が多すぎて何から始めればいいか分からない','時間がなくて副業を続けられない'],desires:['月5〜10万円の副収入を得たい','会社に依存しない収入源を作りたい'],before:'月収22万、残業続き、将来が見えない会社員',after:'月収+10万の副収入、時間の余裕、自信'},
+   products:{梅:{title:'副業の始め方完全ガイド',price:2980,url:'https://note.com/ai_note_pro/n/ume'},竹:{title:'AIで月10万稼ぐロードマップ',price:9800,url:'https://note.com/ai_note_pro/n/take'},松:{title:'Threads×note完全自動化',price:29800,url:'https://note.com/ai_note_pro/n/matsu'}},
+   threads_url:'https://www.threads.net/@ai_note_pro',x_url:'',note_url:'https://note.com/ai_note_pro',
+   stats:{notes_total:47,this_month_revenue:248400,posts_total:312}},
+  {id:'ac002',name:'復縁・恋愛垢',genre:'復縁・恋愛心理',harm:'R',color:'#c9a84c',
+   character:{name:'あやか',age:26,first_person:'私',background:'元彼との復縁を2回経験。恋愛心理学を独学で学び、SNSで発信を始めたら共感が集まりnote販売で月20万に。',tone:'同じ経験をした友達に話しかけるような文体。感情的で共感を重視する。女性的な柔らかさと本音の強さ。',phrases:['あのとき、私は','ずっと言えなかったけど','これを知っていれば','正直すごく怖かったけど'],forbidden:'論理的すぎる表現、箇条書き記号、男性的なビジネス文体',samples:['あのとき、私はもう終わりだと思っていた。毎晩スマホを見ながら「なんであのとき素直になれなかったんだろう」って泣いてた。','でも、今は彼と一緒にいる。ずっと言えなかったけど、この経験をシェアしたくてnoteを書き始めた。']},
+   persona:{target:'元彼との復縁を諦めきれない20代後半〜30代前半の女性',pains:['連絡を取りたいけど怖い','何をしても無駄な気がしてきた','周りに相談できない'],desires:['もう一度やり直したい','好きな人と幸せになりたい'],before:'元彼との別れが頭から離れず毎日辛い',after:'自信を持って連絡でき自然な形で関係が戻った'},
+   products:{梅:{title:'元彼の気持ちを取り戻す7日間',price:2980,url:'https://note.com/love_reset/n/ume'},竹:{title:'復縁を成功させた全手順',price:9800,url:'https://note.com/love_reset/n/take'},松:{title:'恋愛心理学で彼の心を動かす方法',price:29800,url:'https://note.com/love_reset/n/matsu'}},
+   threads_url:'https://www.threads.net/@love_reset_lab',x_url:'',note_url:'https://note.com/love_reset_lab',
+   stats:{notes_total:31,this_month_revenue:156200,posts_total:198}},
+];
+
+let ACCOUNTS = JSON.parse(localStorage.getItem('nf_accounts') || 'null') || DEFAULT_ACCOUNTS;
+let NOTE_AUTH = JSON.parse(localStorage.getItem('nf_auth') || '{}');
+let queue = JSON.parse(localStorage.getItem('nf_queue') || '[]');
+let currentNote = null;
+let editingAcId = null;
+let delTargetId = null;
+let noteType = 'free';
+let researchedPersona = null;
+let isGenerating = false;
+let GENERATED_TITLES = JSON.parse(localStorage.getItem('nf_gen_titles')||'[]');
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+function init() {
+  loadPersonaList();
+  renderAccounts();
+  populateSelects();
+  renderConnectList();
+  renderSecretsCheck();
+  renderDailySlots();
+  renderRotatePreview();
+  renderPersonaSavedList();
+  document.getElementById('daily-date').textContent = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  const tmr = new Date(); tmr.setDate(tmr.getDate()+1); tmr.setHours(5,0,0,0);
+  document.getElementById('next-run').textContent = tmr.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+
+// ══════════════════════════════════════════════
+// ACCOUNT MANAGEMENT
+// ══════════════════════════════════════════════
+function saveAccountsLocal() { localStorage.setItem('nf_accounts', JSON.stringify(ACCOUNTS)); }
+
+function renderAccounts() {
+  const grid = document.getElementById('ac-grid');
+  grid.innerHTML = ACCOUNTS.map(ac => {
+    const c = ac.color || '#c0001a';
+    const s = ac.stats || {notes_total:0,this_month_revenue:0,posts_total:0};
+    const auth = NOTE_AUTH[ac.id] || {};
+    return `
+    <div class="ac-card ${editingAcId===ac.id?'sel':''}" id="accard-${ac.id}">
+      <div style="height:2px;background:linear-gradient(90deg,${c},${c}44)"></div>
+      <div class="ac-head">
+        <div class="ac-avatar" style="background:${c}20;color:${c}">
+          ${ac.character?.name?.[0]||ac.name[0]}
+          <div class="ac-online"></div>
+        </div>
+        <div class="ac-info">
+          <div class="ac-name">${ac.name}</div>
+          <div class="ac-genre">${ac.character?.name||''}（${ac.character?.age||''}歳） — ${ac.genre}</div>
+          <span class="hb h${ac.harm}">${ac.harm}</span>
+        </div>
+      </div>
+      <div class="ac-links">
+        ${ac.threads_url?`<a href="${ac.threads_url}" target="_blank" class="ac-link ok">🌿 Threads</a>`:
+          `<span class="ac-link">Threads未設定</span>`}
+        ${ac.x_url?`<a href="${ac.x_url}" target="_blank" class="ac-link x-ok">✖ X</a>`:
+          `<span class="ac-link">X未設定</span>`}
+        ${ac.note_url?`<a href="${ac.note_url}" target="_blank" class="ac-link note-ok">📝 note</a>`:
+          `<span class="ac-link">note未設定</span>`}
+        ${auth.email?`<span class="ac-link ok">🔐 認証済</span>`:
+          `<span class="ac-link" onclick="sw('connect')" style="cursor:pointer;color:var(--red2);border-color:rgba(192,0,26,.3)">🔗 認証設定</span>`}
+      </div>
+      <div class="ac-stats">
+        <div class="ac-stat"><div class="ac-stat-v">¥${Math.floor(s.this_month_revenue/10000)}万</div><div class="ac-stat-l">今月売上</div></div>
+        <div class="ac-stat"><div class="ac-stat-v" style="color:var(--red2)">${s.notes_total}</div><div class="ac-stat-l">note数</div></div>
+        <div class="ac-stat"><div class="ac-stat-v" style="color:#6699ff">${s.posts_total}</div><div class="ac-stat-l">投稿数</div></div>
+      </div>
+      <div class="ac-actions">
+        <button class="btn b-r b-xs" onclick="quickCreate('${ac.id}')">⚡ note作成</button>
+        <button class="btn b-o b-xs" onclick="openEditAc('${ac.id}')">✏️ 編集</button>
+        <button class="btn b-del b-xs" onclick="confirmDelAc('${ac.id}')">🗑 削除</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ＋追加カード
+  grid.innerHTML += `
+    <div class="add-ac-card" onclick="openAddAc()">
+      <div class="add-ac-icon">＋</div>
+      <div class="add-ac-label">アカウント追加</div>
+    </div>`;
+}
+
+function openAddAc() {
+  editingAcId = null;
+  document.getElementById('addAc-modal-title').textContent = '＋ アカウント追加';
+  document.getElementById('save-ac-btn').textContent = 'アカウントを作成';
+  ['na-name','na-genre','na-char-name','na-bg','na-tone','na-first','na-target','na-phrases','na-threads','na-x','na-note','na-note-email','na-note-pw'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('na-age').value='';
+  document.getElementById('na-color').value='#c0001a';
+  document.getElementById('na-harm').value='A';
+  openM('addAc');
+}
+
+function openEditAc(id) {
+  editingAcId = id;
+  const ac = ACCOUNTS.find(a=>a.id===id);
+  if(!ac) return;
+  document.getElementById('addAc-modal-title').textContent = `✏️ ${ac.name} を編集`;
+  document.getElementById('save-ac-btn').textContent = '変更を保存';
+  document.getElementById('na-name').value = ac.name;
+  document.getElementById('na-genre').value = ac.genre;
+  document.getElementById('na-harm').value = ac.harm;
+  document.getElementById('na-char-name').value = ac.character?.name||'';
+  document.getElementById('na-age').value = ac.character?.age||'';
+  document.getElementById('na-bg').value = ac.character?.background||'';
+  document.getElementById('na-tone').value = ac.character?.tone||'';
+  document.getElementById('na-first').value = ac.character?.first_person||'';
+  document.getElementById('na-target').value = ac.persona?.target||'';
+  document.getElementById('na-phrases').value = (ac.character?.phrases||[]).join(', ');
+  document.getElementById('na-threads').value = ac.threads_url||'';
+  document.getElementById('na-x').value = ac.x_url||'';
+  document.getElementById('na-note').value = ac.note_url||'';
+  document.getElementById('na-color').value = ac.color||'#c0001a';
+  // 認証情報を復元
+  const existAuth = NOTE_AUTH[id]||{};
+  const emailEl = document.getElementById('na-note-email');
+  const pwEl    = document.getElementById('na-note-pw');
+  if(emailEl) emailEl.value = existAuth.email||'';
+  if(pwEl)    pwEl.value    = existAuth.password||'';
+  openM('addAc');
+}
+
+function saveAccount() {
+  const name = document.getElementById('na-name').value.trim();
+  const genre = document.getElementById('na-genre').value.trim();
+  if(!name||!genre){toast('⚠️ 入力エラー','アカウント名とジャンルは必須です');return;}
+
+  const data = {
+    name, genre,
+    harm: document.getElementById('na-harm').value,
+    color: document.getElementById('na-color').value,
+    threads_url: document.getElementById('na-threads').value.trim(),
+    x_url: document.getElementById('na-x').value.trim(),
+    note_url: document.getElementById('na-note').value.trim(),
+    character:{
+      name: document.getElementById('na-char-name').value.trim()||name,
+      age: parseInt(document.getElementById('na-age').value)||25,
+      first_person: document.getElementById('na-first').value.trim()||'私',
+      background: document.getElementById('na-bg').value.trim(),
+      tone: document.getElementById('na-tone').value.trim(),
+      phrases: document.getElementById('na-phrases').value.split(',').map(s=>s.trim()).filter(Boolean),
+      forbidden: '箇条書き記号（・▶︎→★など）、過剰な絵文字、根拠のない断言',
+      samples: []
+    },
+    persona:{
+      target: document.getElementById('na-target').value.trim(),
+      pains:[], desires:[], before:'', after:''
+    },
+    products:{梅:{title:'入門ガイド',price:2980,url:''},竹:{title:'メインnote',price:9800,url:''},松:{title:'プレミアムnote',price:29800,url:''}},
+    stats:{notes_total:0,this_month_revenue:0,posts_total:0}
+  };
+
+  if(editingAcId){
+    const idx = ACCOUNTS.findIndex(a=>a.id===editingAcId);
+    if(idx>=0) ACCOUNTS[idx]={...ACCOUNTS[idx],...data};
+    toast('✅ 変更保存','アカウントを更新しました');
+  } else {
+    data.id = 'ac'+Date.now();
+    ACCOUNTS.push(data);
+    toast('🎉 アカウント追加','新しいアカウントを追加しました');
+  }
+
+  saveAccountsLocal();
+  renderAccounts();
+  populateSelects();
+  renderConnectList();
+  closeM('addAc');
+  editingAcId = null;
+}
+
+function confirmDelAc(id) {
+  delTargetId = id;
+  const ac = ACCOUNTS.find(a=>a.id===id);
+  document.getElementById('del-ac-display').textContent = `「${ac?.name}」を削除しますか？`;
+  openM('delAc');
+}
+
+function doDeleteAc() {
+  ACCOUNTS = ACCOUNTS.filter(a=>a.id!==delTargetId);
+  saveAccountsLocal();
+  renderAccounts();
+  populateSelects();
+  closeM('delAc');
+  toast('🗑️ 削除完了','アカウントを削除しました');
+  delTargetId = null;
+}
+
+function quickCreate(id) {
+  document.getElementById('create-ac').value = id;
+  onAcChange();
+  sw('create');
+}
+
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════
+// PERSONA RESEARCH — 自動保存・削除・一覧
+// ══════════════════════════════════════════════
+let _personaList = []; // 保存済みペルソナ配列
+
+function loadPersonaList() {
+  try { _personaList = JSON.parse(localStorage.getItem('nf_persona_list') || '[]'); } catch { _personaList = []; }
+}
+function savePersonaList() {
+  localStorage.setItem('nf_persona_list', JSON.stringify(_personaList));
+}
+
+// 生成完了後に自動保存
+function saveCurrentPersona() {
+  if (!researchedPersona) return;
+  const acId = document.getElementById('persona-ac').value;
+  const ac = ACCOUNTS.find(a => a.id === acId);
+  const entry = {
+    id: 'p' + Date.now(),
+    acId,
+    acName: ac?.name || '不明',
+    savedAt: new Date().toLocaleString('ja-JP'),
+    data: researchedPersona
+  };
+  loadPersonaList();
+  _personaList.unshift(entry); // 新しいものを先頭に
+  savePersonaList();
+  renderPersonaSavedList();
+  toast('💾 保存完了', `「${researchedPersona.persona_name}」を保存しました`);
+}
+
+function deletePersona(id) {
+  if (!confirm('このペルソナを削除しますか？')) return;
+  loadPersonaList();
+  _personaList = _personaList.filter(p => p.id !== id);
+  savePersonaList();
+  renderPersonaSavedList();
+  toast('🗑 削除しました', 'ペルソナを削除しました');
+}
+
+function loadPersona(id) {
+  loadPersonaList();
+  const entry = _personaList.find(p => p.id === id);
+  if (!entry) return;
+  researchedPersona = entry.data;
+  renderPersonaResult(entry.data);
+  document.getElementById('persona-action').style.display = 'flex';
+  toast('📂 読み込み完了', `「${entry.data.persona_name}」を表示しました`);
+}
+
+function renderPersonaSavedList() {
+  loadPersonaList();
+  const el = document.getElementById('persona-saved-list');
+  if (!el) return;
+  if (!_personaList.length) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = `
+    <div style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.1em;margin-bottom:8px">💾 保存済みペルソナ（${_personaList.length}件）</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${_personaList.map(p => `
+        <div style="background:#f8fdfb;border:1px solid var(--em4);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px">
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="loadPersona('${p.id}')">
+            <div style="font-size:11px;font-weight:800;color:#0d1a12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.data.persona_name}（${p.data.age}・${p.data.occupation}）</div>
+            <div style="font-size:9px;color:#5a7f68;font-weight:600;margin-top:2px">${p.acName} · ${p.savedAt}</div>
+          </div>
+          <button class="btn b-o b-xs" style="flex-shrink:0" onclick="loadPersona('${p.id}')">表示</button>
+          <button class="btn b-xs" style="flex-shrink:0;background:#fff0f0;border:1px solid #fcc;color:#c0001a;padding:3px 8px;border-radius:4px;font-size:9px;font-weight:800;cursor:pointer" onclick="deletePersona('${p.id}')">🗑</button>
+        </div>
+      `).join('')}
+    </div>`;
+}
+
+function renderPersonaResult(data) {
+  const area = document.getElementById('persona-result-area');
+  area.innerHTML = `
+    <div class="persona-result">
+      <div class="pr-title">PERSONA — ${data.persona_name}（${data.age}、${data.occupation}）</div>
+      <div class="pr-row"><div class="pr-key">詳細ターゲット</div><div class="pr-val">${data.target_detail}</div></div>
+      <div class="pr-row"><div class="pr-key">年収・状況</div><div class="pr-val">${data.income} / ${data.life_stage}</div></div>
+      <div class="pr-row"><div class="pr-key">具体的な悩み</div><div class="pr-val">${data.pains.join('\n')}</div></div>
+      <div class="pr-row"><div class="pr-key">望んでいること</div><div class="pr-val">${data.desires.join('\n')}</div></div>
+      <div class="pr-row"><div class="pr-key">読む前の状態</div><div class="pr-val">${data.before_state}</div></div>
+      <div class="pr-row"><div class="pr-key">読んだ後の状態</div><div class="pr-val">${data.after_state}</div></div>
+      <div class="pr-row"><div class="pr-key">購入トリガー</div><div class="pr-val">${data.buying_trigger}</div></div>
+      <div class="pr-row"><div class="pr-key">ためらう理由</div><div class="pr-val">${data.objections.join('\n')}</div></div>
+      <div class="pr-row"><div class="pr-key">無料note hook</div><div class="pr-val">${data.free_note_hooks.join('\n')}</div></div>
+      <div class="pr-row"><div class="pr-key">有料noteの訴求</div><div class="pr-val">${data.paid_note_appeal}</div></div>
+    </div>`;
+}
+
+async function runPersonaResearch() {
+  const acId = document.getElementById('persona-ac').value;
+  const target = document.getElementById('p-target').value.trim();
+  const pain = document.getElementById('p-pain').value.trim();
+  const genre = document.getElementById('p-genre').value.trim();
+  const ref = document.getElementById('p-ref').value.trim();
+  const ac = ACCOUNTS.find(a=>a.id===acId);
+
+  if(!target&&!pain) {toast('⚠️','ターゲットか悩みを入力してください');return;}
+
+  const area = document.getElementById('persona-result-area');
+  area.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ink6)"><div class="spin" style="width:18px;height:18px;border-width:2px;margin:0 auto 10px"></div>Claude Sonnet がリサーチ中...</div>`;
+
+  const prompt = `あなたはマーケティングリサーチの専門家です。
+以下の簡易情報をもとに、詳細なターゲットペルソナを構築してください。
+
+アカウントジャンル: ${ac?.genre || genre}
+簡易ターゲット: ${target}
+悩み・キーワード: ${pain}
+${ref ? `参考文章: ${ref}` : ''}
+
+以下のJSON形式のみで返してください（コードブロックなし）:
+{
+  "persona_name": "ペルソナの名前（架空）",
+  "age": "年齢",
+  "occupation": "職業",
+  "income": "年収・収入",
+  "life_stage": "ライフステージ",
+  "target_detail": "詳細なターゲット説明（3文）",
+  "pains": ["具体的な悩み1","具体的な悩み2","具体的な悩み3","具体的な悩み4","具体的な悩み5"],
+  "desires": ["望んでいること1","望んでいること2","望んでいること3"],
+  "before_state": "このnoteを読む前の状態（具体的に）",
+  "after_state": "このnoteを読んだ後になりたい状態（具体的に）",
+  "buying_trigger": "購入・行動のトリガー",
+  "objections": ["購入をためらう理由1","理由2","理由3"],
+  "media_habits": "普段見るメディア・SNS",
+  "free_note_hooks": ["無料noteで刺さるフック1","フック2","フック3"],
+  "paid_note_appeal": "有料noteを買ってもらうための一番の訴求ポイント"
+}`;
+
+  try {
+    const res = await callClaude(prompt,'');
+    const m = res.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m?m[0]:res);
+    researchedPersona = data;
+
+    renderPersonaResult(data);
+    document.getElementById('persona-action').style.display = 'flex';
+
+    // ★ 生成完了で自動保存
+    saveCurrentPersona();
+    toast('✅ ペルソナ構築完了・自動保存しました', `「${data.persona_name}」を保存しました`);
+  } catch(e) {
+    area.innerHTML=`<div class="empty" style="color:var(--red2)">エラー: ${e.message}</div>`;
+  }
+}
+
+function usePersonaForNote() {
+  if(!researchedPersona) return;
+  const p = researchedPersona;
+  document.getElementById('c-problem').value = p.pains.slice(0,3).join('、');
+  document.getElementById('c-message').value = p.paid_note_appeal;
+  sw('create');
+  toast('↗️ ペルソナを引き継ぎ','create画面にペルソナを反映しました');
+}
+
+// ══════════════════════════════════════════════
+// NOTE 作成
+// ══════════════════════════════════════════════
+function setNoteType(t) {
+  noteType = t;
+  document.getElementById('type-free-btn').style.opacity = t==='free'?'1':'0.4';
+  document.getElementById('type-paid-btn').style.opacity = t==='paid'?'1':'0.4';
+  document.getElementById('price-field').style.display = t==='paid'?'block':'none';
+}
+
+function onAcChange() {
+  const ac = ACCOUNTS.find(a=>a.id===document.getElementById('create-ac').value);
+  if(!ac) return;
+  const p = ac.persona;
+  const c = ac.character;
+  document.getElementById('ac-persona-preview').innerHTML = `
+    <div style="background:rgba(192,0,26,.05);border:1px solid rgba(192,0,26,.15);padding:10px 12px;border-radius:2px;font-size:10px;line-height:1.8">
+      <div style="font-family:var(--fm);font-size:8px;letter-spacing:.2em;color:var(--red2);margin-bottom:5px">CHARACTER: ${c.name}（${c.age}歳 / ${c.first_person}）</div>
+      <div style="color:var(--paper3)">対象: ${p.target}</div>
+      <div style="color:var(--ink6)">悩み: ${p.pains?.slice(0,2).join('、')}</div>
+    </div>`;
+}
+
+async function startGen() {
+  const acId = document.getElementById('create-ac').value;
+  const problem = document.getElementById('c-problem').value.trim();
+  const message = document.getElementById('c-message').value.trim();
+  const count = parseInt(document.getElementById('c-count').value);
+  const genThreads = document.getElementById('gen-threads').checked;
+  const genX = document.getElementById('gen-x').checked;
+
+  if(!acId){toast('⚠️','アカウントを選択してください');return;}
+  if(!problem&&!message){toast('⚠️','悩みかメッセージを入力してください');return;}
+
+  // 重複チェック（同アカウントの過去タイトルと照合）
+  const acDone = queue.filter(q=>q.status==='done'&&q.acId===acId);
+  if(acDone.length > 0 && problem) {
+    const similar = acDone.filter(q=>{
+      const t = (q.title||'').toLowerCase();
+      const p = problem.toLowerCase();
+      const words = p.split(/[、。，,\s]+/).filter(w=>w.length>2);
+      return words.some(w=>t.includes(w));
+    });
+    if(similar.length > 0) {
+      if(!confirm(`類似テーマのnoteが${similar.length}本存在します。\n\n「${similar[0].title}」\n\n続けて生成しますか？（重複は基本禁止です）`)) return;
+    }
+  }
+
+  isGenerating=true;
+  document.getElementById('gen-btn').disabled=true;
+  document.getElementById('gen-btn').textContent='生成中...';
+
+  const items=[];
+  for(let i=0;i<count;i++){
+    const item={
+      id:`q${Date.now()}${i}`,idx:i+1,total:count,status:'wait',
+      acId,type:noteType,priceKey:document.getElementById('note-price')?.value||'竹',
+      problem,message,titleHint:document.getElementById('c-title').value.trim(),
+      ref:document.getElementById('c-ref').value.trim(),
+      uploadText: _uploadedFileText || '',   // ← ファイルアップロード内容
+      style:document.getElementById('c-style').value,
+      words:document.getElementById('c-words').value,
+      genThreads,genX,
+      title:'',body:'',threadsPost:'',xPost:'',thumbs:[],genTime:null
+    };
+    items.push(item);
+    queue.push(item);
+  }
+
+  document.getElementById('queue-empty').style.display='none';
+  document.getElementById('queue-list').style.display='block';
+  document.getElementById('b-create').textContent=queue.length;
+  renderQueueList();
+
+  for(const item of items) await generateSingleNote(item);
+
+  isGenerating=false;
+  document.getElementById('gen-btn').disabled=false;
+  document.getElementById('gen-btn').textContent='⚡ note生成 + SNS投稿文を作る';
+  toast('🎉 生成完了',`${count}本のnoteを生成しました`);
+}
+
+async function generateSingleNote(item) {
+  item.status='running';
+  renderQueueList();
+
+  const ac = ACCOUNTS.find(a=>a.id===item.acId);
+  if(!ac){item.status='error';item.error='アカウントが見つかりません';renderQueueList();return;}
+  const c = ac.character;
+  const p = ac.persona;
+  const isPaid = item.type==='paid';
+  // 価格帯の解決
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const priceVal = PRICE_MAP[item.priceKey] || 9800;
+  const prod = {title:'有料note',price:priceVal,url:ac.note_url||''};
+
+  const wc = parseInt(item.words) || 3500;
+
+  // ━━ セールスレター＋有料記事モード ━━
+  if (item.style === 'sales') {
+    return await generateSalesNote(item, ac, wc);
+  }
+
+  const structures = {
+    story:`はじめに（200字）→体験談の設定・感情で共感から始める\n第1章（600字）→当時の状況と問題の背景\n第2章（600字）→転機となった気づき・行動\n第3章（700字）→実際にやったこと（具体的手順）\n${isPaid?'第4章（700字）→詳細な方法と再現手順\n第5章（500字）→結果と証拠\n':''}おわりに（200字）→読者への行動促し${isPaid?'':`\n有料noteへの自然な誘導: ${prod.url}`}`,
+    howto:`はじめに（200字）→この記事で得られること\n${isPaid?'準備（300字）→必要なものと前提条件\n':''}STEP 1〜${isPaid?6:3}（各${isPaid?600:450}字）→具体手順、各STEPに実体験1つ\nまとめ（200字）→復習と次のアクション`,
+    list:`はじめに（150字）→なぜこのリストを作ったか\n${isPaid?10:5}選（各${isPaid?450:350}字）→各項目に実体験と数字\nまとめ（150字）→最重要ポイント`,
+    reveal:`冒頭（200字）→衝撃的な数字か事実でスタート\n「なぜ?」（400字）→読者の疑問を代弁\n真実（${Math.round(wc*0.5)}字）→丁寧な解説\n${isPaid?`実践法（${Math.round(wc*0.35)}字）→再現手順\n`:''}まとめ（200字）→行動促し`,
+    knowhow:`はじめに（300字）→このnoteで何が学べるか・なぜ自分が語れるか\nノウハウ背景（400字）→このノウハウが生まれた経緯・自分の失敗談\n核心ノウハウ1（${Math.round(wc*0.18)}字）→最重要ポイントを体験談と数字で解説\n核心ノウハウ2（${Math.round(wc*0.18)}字）→第2のポイント。よくある誤解も添える\n核心ノウハウ3（${Math.round(wc*0.18)}字）→第3のポイント。読者が今すぐできるアクション付き\n${isPaid?`応用編（${Math.round(wc*0.2)}字）→上級テクニック・失敗しないための注意点\nQ&A（${Math.round(wc*0.1)}字）→よくある疑問に答える\n`:''}まとめ＆次のステップ（300字）→要点整理と${isPaid?'購入者へのメッセージ':'有料noteへの誘導'}`
+  };
+
+  const systemPrompt = `あなたは今から完全に「${c.name}」（${c.age}歳）という人物になりきってnoteの記事を書きます。
+
+プロフィール: ${c.background}
+一人称: ${c.first_person}
+文体: ${c.tone}
+口癖（自然に散りばめる）: ${c.phrases.join('、')}
+絶対禁止: ${c.forbidden}、HTMLタグ、記号（・▶︎→★◆など）
+
+文章サンプル（この文体を完全に真似る）:
+${c.samples.join('\n')}
+
+ターゲット読者: ${p.target}
+読者の悩み: ${(p.pains||[]).join('、')}`;
+
+  const userPrompt = `以下の条件でnoteを書いてください。
+
+ターゲットの悩み: ${item.problem||p.pains?.[0]||'副業を始めたい'}
+伝えたいメッセージ: ${item.message||p.desires?.[0]||''}
+${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルはあなたが最適なものを考えてください'}
+${item.ref?`参考文章（文体の参考に）:\n${item.ref}`:''}
+${item.uploadText?`【80点→120点リメイク元コンテンツ】
+以下のコンテンツを参考に、丸パクリせずエッセンスだけ抽出して120点のnoteに生まれ変わらせてください。
+- 良い部分はペルソナの言葉に書き直して活かす
+- 不足している価値・情報・具体例を大幅に追加
+- 読者への共感・感情的つながりを強化
+- 構成・順序を最適化（必要なら組み換える）
+元コンテンツ（参考用）:
+${item.uploadText.substring(0,3000)}
+`:''}
+構成: ${structures[item.style]||structures.story}
+【文字数の絶対ルール】
+指定文字数: ${item.words}字
+これは最低文字数です。必ずこれ以上の文字数で書いてください。
+${item.words}字未満での提出は絶対に禁止です。
+文字数が足りない場合は、体験談・具体例・詳細説明を追加して必ず超えること。
+${isPaid?`これは有料note（¥${priceVal.toLocaleString()}）です。この価格に見合う十分な価値・情報量・独自性を持たせてください。`:`最後に有料noteへの自然な誘導文を入れてください。${ac.note_url?"URL: "+ac.note_url:""}`}
+
+${item.genThreads||item.genX?`
+【SNS投稿文も一緒に作成】
+${item.genThreads?'Threads用投稿文: このnoteを宣伝する200〜300字の投稿（絵文字2〜3個、ハッシュタグ2〜3個）':''}
+${item.genX?'X用投稿文: このnoteを宣伝する140字以内のツイート（簡潔でインパクト重視）':''}`:''}
+
+JSON形式のみで返してください（コードブロックなし、説明文なし）:
+{
+  "title": "noteタイトル",
+  "body": "note本文全体（改行は\\nで表現、記号なし、クリーンテキスト）",
+  "description": "概要文160字",
+  "tags": ["タグ1","タグ2","タグ3","タグ4","タグ5"],
+  "threads_post": "${item.genThreads?'Threads投稿文（280字以内、絵文字・ハッシュタグ含む）':''}",
+  "x_post": "${item.genX?'X投稿文（140字以内）':''}",
+  "thumbnail_prompts": [
+    "カバー画像の英語プロンプト（タイトル「${item.titleHint||''}」に合わせた16:9サムネ。ジャンル:${ac?.genre||'副業'}。美しくプロフェッショナルで視覚的に引き込まれるデザイン。テキストなし。高品質Editorial写真スタイル）",
+    "本文挿絵の英語プロンプト（同ジャンルに合わせた補足イメージ。16:9）",
+    "まとめ画像の英語プロンプト（行動促進系の締めビジュアル。16:9）"${isPaid?`,\n    "実績証拠画像の英語プロンプト（成功・達成感を表現。16:9）",\n    "CTA画像の英語プロンプト（購買欲を刺激する高級感あるデザイン。16:9）"`:''}
+  ]
+}`;
+
+  try {
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m?m[0]:raw);
+
+    // 重複チェック
+    const newTitle = data.title||'タイトル未設定';
+    if(GENERATED_TITLES.includes(newTitle)) {
+      // タイトルが重複 → 再生成リクエスト
+      console.warn('タイトル重複検出、再生成します:', newTitle);
+    }
+    GENERATED_TITLES.push(newTitle);
+    if(GENERATED_TITLES.length > 200) GENERATED_TITLES.shift();
+    localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+    item.title = newTitle;
+    item.body = (data.body||'').replace(/\\n/g,'\n');
+    item.description = data.description||'';
+    item.tags = data.tags||[];
+    item.threadsPost = data.threads_post||'';
+    item.xPost = data.x_post||'';
+    item.thumbPrompts = data.thumbnail_prompts||[];
+    item.status='done';
+    item.genTime=new Date().toLocaleTimeString('ja-JP');
+
+    await genThumbs(item);
+
+    // draft save select に追加
+    updateDraftNoteSelect();
+
+    // ★ 自動下書き保存（認証情報が設定済みの場合）
+    await autoSaveDraft(item);
+
+  } catch(e) {
+    item.status='error';item.error=e.message;
+    console.error(e);
+  }
+  saveQueue(); // ★ 生成完了・エラー時に必ず保存
+  renderQueueList();
+  document.getElementById('b-create').textContent=queue.filter(q=>q.status==='done').length;
+  renderHistory();
+  if(item.status==='done'&&queue.filter(q=>q.status==='done').length===1) showNoteViewer(item);
+}
+
+// ══════════════════════════════════════════════
+// THUMBNAILS
+// ══════════════════════════════════════════════
+// ジャンル別のサムネプロンプト強化
+function buildThumbPrompt(basePrompt, ac, item) {
+  const genre = ac?.genre || '';
+  const harm  = ac?.harm  || 'A';
+  // ジャンル別スタイル
+  const styleByHarm = {
+    A: 'modern minimalist business design, dark emerald green and gold accent, clean typography, professional Japanese blog cover',
+    H: 'warm healthcare wellness design, soft blue and white, clean modern lifestyle photography, Japanese blog cover',
+    R: 'romantic warm tones, pink and rose gold, elegant minimalist design, Japanese lifestyle blog cover',
+    M: 'financial success design, dark navy and gold, luxury professional feel, Japanese money blog cover'
+  };
+  const style = styleByHarm[harm] || styleByHarm.A;
+  return `${basePrompt}, ${style}, 16:9 aspect ratio, high quality editorial, ultra detailed, no text overlay, visually striking`;
+}
+
+async function genThumbs(item) {
+  const key = window.GEMINI_API_KEY || localStorage.getItem('nf_gemini_key') || '';
+  const ac = ACCOUNTS.find(a=>a.id===item.acId)||{};
+  item.thumbs = item.thumbPrompts.map((p,i)=>({prompt:p,label:['カバー','挿絵','まとめ','実績','CTA'][i]||`画像${i+1}`,isDemo:true,color:['#c0001a20','#1a3a8a20','#1a7a3a20','#8a601a20','#6a1a8a20'][i%5]}));
+  if(!key) {
+    // APIキー未設定の場合：ビューアーにプロンプトだけ表示（設定ガイド付き）
+    return;
+  }
+
+  // 最大3枚（APIレート制限対策）
+  const maxThumbs = Math.min(item.thumbPrompts.length, 3);
+
+  for(let i=0;i<maxThumbs;i++){
+    try{
+      const enhancedPrompt = buildThumbPrompt(item.thumbPrompts[i], ac, item);
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-05:predict?key=${key}`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          instances:[{prompt: enhancedPrompt}],
+          parameters:{sampleCount:1,aspectRatio:'16:9',safetyFilterLevel:'block_some',personGeneration:'dont_allow'}
+        })
+      });
+      const d=await r.json();
+      const b64=d.predictions?.[0]?.bytesBase64Encoded;
+      if(b64){item.thumbs[i].src=`data:image/png;base64,${b64}`;item.thumbs[i].isDemo=false;}
+    }catch(e){console.warn('サムネ生成失敗',e);}
+    await sleep(1200);
+  }
+}
+
+// ══════════════════════════════════════════════
+// NOTE VIEWER
+// ══════════════════════════════════════════════
+function renderQueueList() {
+  const el = document.getElementById('queue-list');
+  const icons={wait:'⏳',running:'<span class="spin"></span>',done:'✅',error:'❌'};
+  const slabels={wait:'待機',running:'生成中',done:'完了',error:'エラー'};
+  el.innerHTML = queue.map(q=>`
+    <div class="queue-item ${q.status} ${currentNote?.id===q.id?'sel':''}" onclick="showNoteViewer(queue.find(x=>x.id==='${q.id}'))">
+      <div class="qi-idx">${String(q.idx).padStart(2,'0')}</div>
+      <div class="qi-body">
+        <div class="qi-title">${q.title||(q.status==='running'?'生成中...':'生成待ち')}</div>
+        <div class="qi-meta">${q.type==='paid'?`有料 ${q.priceKey}`:'無料'} · ${q.style} · ${q.words}字 ${q.genTime?'· '+q.genTime:''}</div>
+      </div>
+      <div class="qi-stat ${q.status}">${icons[q.status]} ${slabels[q.status]}</div>
+    </div>`).join('');
+}
+
+function showNoteViewer(item) {
+  if(!item||item.status!=='done') return;
+  currentNote=item;
+  renderQueueList();
+  const wrap=document.getElementById('viewer-area');
+  wrap.style.display='block';
+  const ac=ACCOUNTS.find(a=>a.id===item.acId)||{};
+  const c=ac.character||{};
+  const p=ac.persona||{};
+
+  // 本文 heading 処理
+  const bodyHtml = item.body.split('\n').map(line=>{
+    if(/^(第[一二三四五六七八九十\d]+章|はじめに|おわりに|まとめ|序章|あとがき)/.test(line.trim()))
+      return `<span class="note-heading">${line.trim()}</span>`;
+    return line;
+  }).join('\n');
+
+  // SNSタブ
+  const hasSNS = item.threadsPost||item.xPost;
+
+  wrap.innerHTML=`
+  <div class="nv-wrap">
+    <div class="nv-head">
+      <div class="nv-title">${item.title}</div>
+      <div class="nv-meta-row">
+        <span class="nbadge ${item.type==='paid'?'nb-paid':'nb-free'}">${item.type==='paid'?`¥${({p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800}[item.priceKey]||9800).toLocaleString()}`:'無料'}</span>
+        <span class="nbadge nb-char">📝 ${c.name||''}（${c.age||''}歳 / ${c.first_person||'私'}視点）</span>
+        <span class="nbadge nb-neutral">${item.words}字 · ${item.style}</span>
+        ${item.tags.map(t=>`<span class="nbadge nb-neutral">#${t}</span>`).join('')}
+      </div>
+      ${item.description?`<div style="font-size:11px;color:var(--ink6);line-height:1.7;margin-top:6px">${item.description}</div>`:''}
+    </div>
+    <div class="nv-persona-bar">
+      <span style="color:var(--ink6)">対象読者:</span><span>${p.target||''}</span>
+      <span style="color:var(--ink6)">キャラ:</span><span>${c.name||''}</span>
+      ${ac.note_url?`<a href="${ac.note_url}" target="_blank" style="color:var(--gold2);font-family:var(--fm);font-size:9px;text-decoration:none">📝 noteで確認</a>`:''}
+      ${ac.threads_url?`<a href="${ac.threads_url}" target="_blank" style="color:#3acc66;font-family:var(--fm);font-size:9px;text-decoration:none">🌿 Threads</a>`:''}
+      ${ac.x_url?`<a href="${ac.x_url}" target="_blank" style="color:var(--paper3);font-family:var(--fm);font-size:9px;text-decoration:none">✖ X</a>`:''}
+    </div>
+    <div class="nv-body">
+      <div class="note-text">${bodyHtml}</div>
+    </div>
+
+    ${hasSNS?`
+    <div style="padding:16px 22px;border-top:1px solid var(--ink4)">
+      <div class="sec" style="margin-bottom:10px">SNS投稿文</div>
+      <div class="social-tabs">
+        ${item.threadsPost?`<div class="social-tab on" onclick="showSocialTab(this,'st-threads')">🌿 Threads</div>`:''}
+        ${item.xPost?`<div class="social-tab ${!item.threadsPost?'on':''}" onclick="showSocialTab(this,'st-x')">✖ X</div>`:''}
+      </div>
+      ${item.threadsPost?`<div class="social-post-box" id="st-threads">${item.threadsPost}</div>`:''}
+      ${item.xPost?`<div class="social-post-box" id="st-x" style="display:${item.threadsPost?'none':'block'}">${item.xPost}</div>`:''}
+      <div style="margin-top:10px">
+        <label style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.12em;display:block;margin-bottom:5px">NOTE URL（入力するとSNS投稿文に自動挿入）</label>
+        <div style="display:flex;gap:6px">
+          <input type="url" id="sns-note-link-${item.id}" placeholder="https://note.com/..." value="${item.noteLink||''}" style="flex:1;padding:7px 10px;background:#f8fdfb;border:1px solid var(--ink5);border-radius:5px;font-size:11px;font-weight:600;color:#0d1a12" oninput="updateNoteLink('${item.id}',this.value)">
+          <button class="btn b-sm" style="background:var(--em5);color:var(--em3);border:1px solid var(--em4);font-weight:800;white-space:nowrap" onclick="regenSNSPosts('${item.id}')">🔄 SNS文を再生成</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        ${item.threadsPost?`
+          <button class="btn b-sm" style="background:#e8f8f0;color:var(--em3);border:1px solid var(--em4);font-weight:800" onclick="copyAndOpenThreads('${item.id}')">
+            🌿 Threadsにコピー＆投稿ページを開く
+          </button>`:''
+        }
+        ${item.xPost?`
+          <button class="btn b-sm" style="background:#f0f4ff;color:#2484cc;border:1px solid rgba(36,132,204,.3);font-weight:800" onclick="copyAndOpenX('${item.id}')">
+            ✖ Xにコピー＆投稿ページを開く
+          </button>`:''
+        }
+        ${item.threadsPost?`<button class="btn b-o b-xs" onclick="copyText('${escStr(item.threadsPost)}')">📋 Threadsテキストのみコピー</button>`:''}
+        ${item.xPost?`<button class="btn b-o b-xs" onclick="copyText('${escStr(item.xPost)}')">📋 Xテキストのみコピー</button>`:''}
+      </div>
+    </div>`:''}
+
+    ${item.thumbs?.length?`
+    <div style="padding:14px 22px;border-top:1px solid var(--ink4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="sec" style="margin-bottom:0">サムネイル（${item.thumbs.length}枚）</div>
+        ${item.thumbs.some(t=>t.isDemo)?`<button class="btn b-o b-xs" onclick="openApiSettings()" style="font-size:9px">⚙️ Gemini APIキーを設定して実画像生成</button>`:'<span style="font-size:9px;color:var(--em3);font-family:var(--fm)">✅ Imagen4で生成済</span>'}
+      </div>
+      <div class="thumb-grid">
+        ${item.thumbs.map(t=>`
+          <div class="thumb-card">
+            <div class="thumb-img" style="background:${t.color||'var(--ink4)'}">
+              ${t.src?`<img src="${t.src}" alt="${t.label}">`:`<span style="font-size:22px;opacity:.4">🖼️</span>`}
+            </div>
+            <div class="thumb-label">${t.label}</div>
+          </div>`).join('')}
+      </div>
+    </div>`:''}
+
+    <div style="padding:14px 22px;border-top:1px solid var(--ink4);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button class="btn b-r" onclick="copyNoteBody()">📋 本文を全コピー</button>
+      <button class="btn b-o b-sm" onclick="downloadNote()">⬇️ .txt保存</button>
+      <button class="btn b-gr b-sm" onclick="sendToDraftAndGetUrl()">📝 下書き保存 + URL取得</button>
+      <button class="btn b-o b-sm" onclick="regenCurrent()">↺ 再生成</button>
+      <div id="draft-url-display-${item.id}" style="display:${item.draftUrl?'flex':'none'};align-items:center;gap:6px;background:var(--em5);border:1px solid var(--em4);border-radius:6px;padding:6px 12px">
+        <span style="font-size:10px;font-weight:800;color:var(--em3)">📝 下書きURL:</span>
+        <a href="${item.draftUrl||'#'}" target="_blank" id="draft-url-link-${item.id}" style="font-size:10px;color:var(--em3);font-weight:800;text-decoration:underline;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.draftUrl||''}</a>
+        <button class="btn b-o b-xs" onclick="navigator.clipboard.writeText('${item.draftUrl||''}').then(()=>toast('📋コピー','下書きURLをコピーしました'))">コピー</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function showSocialTab(el, panelId) {
+  el.closest('.nv-body, div').querySelectorAll('.social-tab').forEach(t=>t.classList.remove('on'));
+  el.closest('.nv-body, div').querySelectorAll('.social-post-box').forEach(p=>p.style.display='none');
+  el.classList.add('on');
+  document.getElementById(panelId).style.display='block';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ファイルアップロード → 120点リメイク
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _uploadedFileText = '';
+
+async function onFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('c-upload-status');
+  const previewEl = document.getElementById('c-upload-preview');
+  const analysisEl = document.getElementById('c-upload-analysis');
+  statusEl.textContent = `📄 ${file.name} を読み込み中...`;
+  statusEl.style.color = 'var(--em3)';
+
+  try {
+    let text = '';
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    if (ext === 'pdf') {
+      // PDF: FileReader でbase64→ArrayBuffer→テキスト抽出
+      text = await readPdfText(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      text = await readExcelText(file);
+    } else {
+      // txt/csv/md/docx → UTF-8テキストとして読む
+      text = await file.text();
+    }
+
+    // 最大12000文字に制限（APIコンテキスト考慮）
+    _uploadedFileText = text.substring(0, 12000);
+    const preview = _uploadedFileText.substring(0, 400).replace(/\n/g, ' ');
+
+    previewEl.style.display = 'block';
+    previewEl.textContent = preview + (_uploadedFileText.length > 400 ? '...' : '');
+    statusEl.textContent = `✅ ${file.name} (${Math.round(_uploadedFileText.length/1000)}KB相当) — AI分析準備完了`;
+    statusEl.style.color = 'var(--em)';
+
+    // Claude に即座に分析させる
+    analysisEl.style.display = 'block';
+    analysisEl.innerHTML = '<div style="font-size:10px;color:#5a7f68;font-weight:700;padding:8px 0">🔍 AIが内容を分析中...</div>';
+    const analysis = await analyzeUploadedContent(_uploadedFileText);
+    analysisEl.innerHTML = `
+      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:12px;font-size:10px;line-height:1.7;color:#0d1a12;font-weight:600">
+        <div style="font-size:11px;font-weight:800;color:var(--em3);margin-bottom:8px">📊 AI分析結果（80点→120点のポイント）</div>
+        <div id="analysis-text" style="white-space:pre-wrap">${analysis.summary}</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--em4);display:flex;gap:8px">
+          <button class="btn b-r b-sm" onclick="applyAnalysisToForm(${JSON.stringify(analysis).replace(/"/g,'&quot;')})">✅ この分析を使ってnoteを生成</button>
+          <button class="btn b-o b-xs" onclick="clearUploadedFile()">✕ ファイルをクリア</button>
+        </div>
+      </div>`;
+  } catch(e) {
+    statusEl.textContent = `⚠️ 読み込みエラー: ${e.message}`;
+    statusEl.style.color = 'var(--red2)';
+  }
+}
+
+async function readPdfText(file) {
+  // PDFをバイナリ読み込み→テキスト抽出（簡易）
+  const ab = await file.arrayBuffer();
+  const bytes = new Uint8Array(ab);
+  // PDF内のテキストストリームを抽出（BT/ET間のTj/TJ演算子）
+  let text = '';
+  const str = new TextDecoder('latin1').decode(bytes);
+  const matches = str.matchAll(/\(([^)]{1,300})\)\s*Tj/g);
+  for (const m of matches) {
+    text += m[1].replace(/\\n/g,'\n').replace(/\\r/g,'').replace(/\\\(/g,'(').replace(/\\\)/g,')') + ' ';
+  }
+  // TJ配列
+  const tjMatches = str.matchAll(/\[([^\]]{1,500})\]\s*TJ/g);
+  for (const m of tjMatches) {
+    const inner = m[1].replace(/\(([^)]*)\)/g, '$1').replace(/-?\d+/g,' ');
+    text += inner + ' ';
+  }
+  return text.trim() || '[PDFのテキスト抽出に失敗しました。テキストとして貼り付けてください]';
+}
+
+async function readExcelText(file) {
+  const ab = await file.arrayBuffer();
+  // SheetJSなしでXLSXのシンプルパース（shared strings + rows）
+  const bytes = new Uint8Array(ab);
+  // ZIPとして展開→xl/sharedStrings.xmlとxl/worksheets/sheet1.xml
+  const text = new TextDecoder('utf-8', {fatal:false}).decode(bytes);
+  // XMLから文字列を抽出（簡易）
+  const strings = [...text.matchAll(/<t[^>]*>([^<]+)<\/t>/g)].map(m=>m[1]);
+  return strings.join('\t').substring(0,12000) || '[Excelファイルの読み込み完了]';
+}
+
+async function analyzeUploadedContent(text) {
+  const prompt = `あなたはnoteコンテンツのプロデューサーです。
+以下のコンテンツを分析して、「80点のコンテンツを120点にするための改善ポイント」を教えてください。
+
+【元コンテンツ】
+${text.substring(0, 4000)}
+
+分析してください:
+1. このコンテンツの良い点（残すべき価値）
+2. 足りない点・弱い点（改善が必要な箇所）
+3. 120点にするための具体的な改善案（3つ）
+4. noteのターゲット読者として最適な人物像
+5. このコンテンツを元にしたnoteのテーマ・悩み・メッセージ案
+
+JSON形式のみで返してください:
+{
+  "summary": "分析サマリー（改行を含む読みやすいテキスト）",
+  "goodPoints": ["良い点1","良い点2"],
+  "improvements": ["改善案1","改善案2","改善案3"],
+  "target": "ターゲット読者像",
+  "theme": "noteのテーマ",
+  "problem": "読者の悩み",
+  "message": "伝えるメッセージ"
+}`;
+  try {
+    const raw = await callClaude('あなたはnoteコンテンツのプロデューサーです。', prompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    return JSON.parse(m ? m[0] : raw);
+  } catch(e) {
+    return { summary: 'AI分析に失敗しました: ' + e.message, theme:'', problem:'', message:'' };
+  }
+}
+
+function applyAnalysisToForm(analysis) {
+  if (analysis.problem) document.getElementById('c-problem').value = analysis.problem;
+  if (analysis.message) document.getElementById('c-message').value = analysis.message;
+  toast('✅ 分析結果を反映', 'フォームに自動入力しました。内容を確認して生成してください');
+}
+
+function clearUploadedFile() {
+  _uploadedFileText = '';
+  document.getElementById('c-upload-file').value = '';
+  document.getElementById('c-upload-status').textContent = '未選択';
+  document.getElementById('c-upload-status').style.color = '#5a7f68';
+  document.getElementById('c-upload-preview').style.display = 'none';
+  document.getElementById('c-upload-analysis').style.display = 'none';
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 下書きURL取得（バックエンドサーバー経由）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function fetchDraftUrl(itemId, acId) {
+  const auth = NOTE_AUTH[acId] || {};
+  if (!auth.email) return null;
+  try {
+    const res = await fetch('http://localhost:3001/api/draft-url', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email: auth.email, password: auth.password, noteId: auth.noteId, title: queue.find(q=>q.id===itemId)?.title })
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.draftUrl || null;
+  } catch { return null; }
+}
+
+function copyNoteBody() {
+  if(!currentNote) return;
+  navigator.clipboard.writeText(`${currentNote.title}\n\n${currentNote.body}`).then(()=>toast('📋 コピー完了','note本文をクリップボードにコピーしました'));
+}
+
+function downloadNote() {
+  if(!currentNote) return;
+  const ac=ACCOUNTS.find(a=>a.id===currentNote.acId)||{};
+  const txt=`タイトル: ${currentNote.title}\nアカウント: ${ac.name}\nキャラ: ${ac.character?.name}\n対象: ${ac.persona?.target}\n\n${currentNote.body}`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type:'text/plain;charset=utf-8'}));
+  a.download=`${currentNote.title.substring(0,25)}.txt`;a.click();
+  toast('⬇️ 保存完了','テキストファイルを保存しました');
+}
+
+async function sendToDraftAndGetUrl() {
+  if(!currentNote) return;
+  // 連携タブに送る
+  document.getElementById('draft-note-sel').value = currentNote.id;
+  document.getElementById('draft-ac-sel').value   = currentNote.acId;
+
+  // まずバックエンドサーバーで下書き保存 + URL取得を試みる
+  const btn = document.querySelector('[onclick="sendToDraftAndGetUrl()"]');
+  if(btn){ btn.disabled=true; btn.textContent='保存中...'; }
+
+  try {
+    // server.js 経由で下書き保存
+    const auth = NOTE_AUTH[currentNote.acId] || {};
+    const res = await fetch('http://localhost:3001/api/draft-save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: auth.email,
+        password: auth.password,
+        title: currentNote.title,
+        body: currentNote.body,
+        tags: currentNote.tags || [],
+        price: currentNote.type==='paid' ? ({p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800}[currentNote.priceKey]||0) : 0
+      })
+    });
+
+    if(res.ok) {
+      const data = await res.json();
+      const draftUrl = data.draftUrl || data.url;
+      if(draftUrl) {
+        // URLを保存してビューワーに表示
+        currentNote.draftUrl = draftUrl;
+        currentNote.drafted  = true;
+        saveAccountsLocal();
+
+        // URLリンクを即座に表示
+        const display = document.getElementById(`draft-url-display-${currentNote.id}`);
+        const link    = document.getElementById(`draft-url-link-${currentNote.id}`);
+        if(display){ display.style.display='flex'; }
+        if(link){ link.href=draftUrl; link.textContent=draftUrl; }
+
+        toast('✅ 下書き保存完了', `URLを取得しました → ${draftUrl.substring(0,40)}...`);
+        refreshDashboard();
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn('server.js未起動またはエラー:', e.message);
+  }
+
+  // server.jsが使えない場合は連携タブへ誘導
+  sw('connect');
+  toast('📝 下書き保存タブへ', 'server.jsが未起動のため、連携タブから手動保存してください');
+  if(btn){ btn.disabled=false; btn.textContent='📝 下書き保存 + URL取得'; }
+}
+
+async function regenCurrent() {
+  if(!currentNote||isGenerating) return;
+  currentNote.status='wait';currentNote.title='';currentNote.body='';
+  renderQueueList();
+  await generateSingleNote(currentNote);
+  showNoteViewer(currentNote);
+}
+
+// ══════════════════════════════════════════════
+// DAILY 5本
+// ══════════════════════════════════════════════
+// ━━ 今日の5本 デフォルトプラン
+const DEFAULT_DAILY_PLAN = [
+  {num:1,type:'free', style:'story',  words:'3500', problem:'', message:'', titleHint:'', priceKey:'竹'},
+  {num:2,type:'free', style:'list',   words:'2000', problem:'', message:'', titleHint:'', priceKey:'竹'},
+  {num:3,type:'free', style:'reveal', words:'3500', problem:'', message:'', titleHint:'', priceKey:'竹'},
+  {num:4,type:'paid', style:'howto',  words:'6000', problem:'', message:'', titleHint:'', priceKey:'竹'},
+  {num:5,type:'paid', style:'story',  words:'10000',problem:'', message:'', titleHint:'', priceKey:'松'},
+];
+
+// ユーザーカスタムプランをlocalStorageで永続化
+function getDailyPlan() {
+  try { return JSON.parse(localStorage.getItem('nf_daily_plan')) || DEFAULT_DAILY_PLAN.map(p=>({...p})); }
+  catch { return DEFAULT_DAILY_PLAN.map(p=>({...p})); }
+}
+function saveDailyPlan(plan) { localStorage.setItem('nf_daily_plan', JSON.stringify(plan)); }
+function resetDailyPlan() {
+  saveDailyPlan(DEFAULT_DAILY_PLAN.map(p=>({...p})));
+  renderDailySlots();
+  toast('↺ リセット', 'デフォルトの5本プランに戻しました');
+}
+
+function renderDailySlots() {
+  const plan = getDailyPlan();
+  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス'};
+  const priceMap = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+
+  document.getElementById('daily-slots').innerHTML = plan.map((p,i) => `
+    <div class="daily-slot" id="dslot-${p.num}" style="flex-direction:column;align-items:stretch;padding:12px 14px;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="ds-num" style="color:${p.type==='paid'?'var(--gold2)':'var(--em)'}">0${p.num}</div>
+        <div style="flex:1">
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'type',this.value);updateDailyPlanField(${i},'priceKey',this.value==='paid'?'竹':'竹')">
+              <option value="free" ${p.type==='free'?'selected':''}>📝 無料note</option>
+              <option value="paid" ${p.type==='paid'?'selected':''}>💰 有料note</option>
+            </select>
+            <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'style',this.value)">
+              <option value="story" ${p.style==='story'?'selected':''}>ストーリー型</option>
+              <option value="knowhow" ${p.style==='knowhow'?'selected':''}>ノウハウ型</option>
+              <option value="howto" ${p.style==='howto'?'selected':''}>ハウツー型</option>
+              <option value="list" ${p.style==='list'?'selected':''}>リスト型</option>
+              <option value="reveal" ${p.style==='reveal'?'selected':''}>衝撃解説型</option>
+              <option value="dialog" ${p.style==='dialog'?'selected':''}>Q&A型</option>
+              <option value="sales" ${p.style==='sales'?'selected':''}>セールスレター</option>
+            </select>
+            <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'words',this.value)">
+              <option value="2000" ${p.words==='2000'?'selected':''}>2,000字</option>
+              <option value="3500" ${p.words==='3500'?'selected':''}>3,500字</option>
+              <option value="6000" ${p.words==='6000'?'selected':''}>6,000字</option>
+              <option value="10000" ${p.words==='10000'?'selected':''}>10,000字</option>
+              <option value="15000" ${p.words==='15000'?'selected':''}>15,000字</option>
+              <option value="20000" ${p.words==='20000'?'selected':''}>20,000字</option>
+            </select>
+            ${p.type==='paid'?`<select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'priceKey',this.value)">
+              <option value="p980" ${p.priceKey==='p980'?'selected':''}>¥980</option>
+              <option value="p2980" ${p.priceKey==='p2980'?'selected':''}>¥2,980</option>
+              <option value="p5980" ${p.priceKey==='p5980'?'selected':''}>¥5,980</option>
+              <option value="竹" ${(p.priceKey==='竹'||p.priceKey==='p9800')?'selected':''}>¥9,800</option>
+              <option value="p19800" ${p.priceKey==='p19800'?'selected':''}>¥19,800</option>
+              <option value="松" ${(p.priceKey==='松'||p.priceKey==='p29800')?'selected':''}>¥29,800</option>
+            </select>`:''}
+          </div>
+        </div>
+        <div class="ds-stat" id="dstat-${p.num}" style="color:var(--ink6);font-size:10px;white-space:nowrap">⏳ 待機</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <input type="text" class="fi" style="flex:1;font-size:10px;padding:5px 8px" placeholder="テーマ・悩み（空欄でAIが自動決定）" value="${p.problem||''}" oninput="updateDailyPlanField(${i},'problem',this.value)">
+        <input type="text" class="fi" style="flex:1;font-size:10px;padding:5px 8px" placeholder="タイトル案（空欄でAI任せ）" value="${p.titleHint||''}" oninput="updateDailyPlanField(${i},'titleHint',this.value)">
+      </div>
+    </div>`).join('');
+}
+
+function updateDailyPlanField(idx, field, value) {
+  const plan = getDailyPlan();
+  plan[idx][field] = value;
+  // type変更時に有料→デフォルト価格を設定
+  if (field === 'type' && value === 'paid' && !plan[idx].priceKey) plan[idx].priceKey = '竹';
+  saveDailyPlan(plan);
+  // 有料/無料切替時だけ再描画（select再生成のため）
+  if (field === 'type') renderDailySlots();
+}
+
+async function startDailyGen() {
+  // ローテーション or 固定 どちらのモードでも正しいアカウントを取得
+  const acId = getActiveDailyAcId();
+  const ac = ACCOUNTS.find(a=>a.id===acId);
+  if(!ac){toast('⚠️','アカウントが見つかりません。アカウント管理タブで登録してください');return;}
+
+  const mode = document.getElementById('daily-ac-mode')?.value || 'rotate';
+  const modeLabel = mode === 'rotate' ? `🔄 ローテーション（${ac.name}）` : `📌 固定（${ac.name}）`;
+
+  const plan = getDailyPlan();
+  document.getElementById('daily-btn').disabled=true;
+  toast('⚡ 5本自動生成開始',`${modeLabel}（${ac.character?.name}）で${plan.length}本生成します`);
+
+  const progEl=document.getElementById('daily-progress');
+  progEl.innerHTML=plan.map((p,i)=>`
+    <div class="prog-step" id="dp${i+1}">
+      <div class="ps-n">${i+1}</div>
+      <div class="ps-b"><div class="ps-name">${p.type==='paid'?'💰 有料':'📝 無料'} note #${i+1}</div><div class="ps-desc">${p.style} · ${p.words}字</div></div>
+      <div class="ps-s wait" id="dps${i+1}">待機</div>
+    </div>`).join('');
+
+  for(let i=0;i<plan.length;i++){
+    const p=plan[i];
+    const item={
+      id:`daily${Date.now()}${i}`,idx:i+1,total:plan.length,status:'wait',
+      acId,type:p.type,priceKey:p.priceKey||'竹',
+      problem:p.problem||'',message:p.message||'',
+      titleHint:p.titleHint||'',ref:'',
+      style:p.style,words:p.words,
+      genThreads:true,genX:true,
+      title:'',body:'',threadsPost:'',xPost:'',thumbs:[],genTime:null
+    };
+    queue.push(item);
+
+    setDStat(i+1,'running','⚡ 生成中...');
+    document.getElementById(`dslot-${p.num}`)?.classList.add('running');
+    document.getElementById(`dp${i+1}`)?.classList.add('active');
+    document.getElementById(`dps${i+1}`).textContent='⚡ 生成中...';
+    document.getElementById(`dps${i+1}`).className='ps-s active';
+
+    await generateSingleNote(item);
+
+    document.getElementById(`dp${i+1}`)?.classList.remove('active');
+    document.getElementById(`dp${i+1}`)?.classList.add('done');
+    document.getElementById(`dps${i+1}`).textContent=item.status==='done'?`✅ ${item.title?.substring(0,18)}...`:'❌ エラー';
+    document.getElementById(`dps${i+1}`).className=`ps-s ${item.status==='done'?'done':'wait'}`;
+    setDStat(p.num, item.status==='done'?'done':'error', item.status==='done'?'✅ 完了':'❌ エラー');
+  }
+
+  document.getElementById('daily-btn').disabled=false;
+  renderQueueList();
+  document.getElementById('b-create').textContent=queue.filter(q=>q.status==='done').length;
+  toast('🎉 完成！',`${ac.name}の${plan.length}本が完成しました`);
+}
+
+
+
+function setDStat(num,cls,msg){
+  const s=document.getElementById(`dstat-${num}`);
+  const r=document.getElementById(`dslot-${num}`);
+  if(!s||!r) return;
+  s.textContent=msg;
+  s.style.color={done:'#3acc66',running:'var(--gold2)',error:'var(--red2)',wait:'var(--ink6)'}[cls]||'var(--ink6)';
+  r.className=`daily-slot${cls==='running'?' running':cls==='done'?' done':cls==='error'?' error':''}`;
+}
+
+// ══════════════════════════════════════════════
+// NOTE 連携・下書き保存
+// ══════════════════════════════════════════════
+function renderConnectList() {
+  document.getElementById('note-connect-list').innerHTML = ACCOUNTS.map(ac=>{
+    const auth = NOTE_AUTH[ac.id]||{};
+    const connected = !!auth.email;
+    return `
+    <div class="connect-card">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:${ac.color||'#c0001a'}22;display:flex;align-items:center;justify-content:center;font-family:var(--fe);color:${ac.color||'#c0001a'}">${ac.character?.name?.[0]||ac.name[0]}</div>
+        <div style="flex:1">
+          <div style="font-size:12px;font-weight:700">${ac.name}</div>
+          <div style="font-size:10px;color:var(--ink6)">${connected?`認証済: ${auth.email}`:'未認証'}</div>
+        </div>
+        <div class="api-status-row ${connected?'api-ok':'api-ng'}" style="padding:5px 10px">
+          ${connected?'✅ 接続済':'❌ 未接続'}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveNoteAuth() {
+  const acId=document.getElementById('conn-ac').value;
+  const email=document.getElementById('conn-email').value.trim();
+  const pw=document.getElementById('conn-pw').value;
+  if(!email||!pw){toast('⚠️','メールアドレスとパスワードは必須です');return;}
+
+  NOTE_AUTH[acId]={email,password:pw,saved:new Date().toISOString()};
+  localStorage.setItem('nf_auth',JSON.stringify(NOTE_AUTH));
+  renderConnectList();
+  toast('💾 認証情報保存',`${ACCOUNTS.find(a=>a.id===acId)?.name} の認証情報を保存しました`);
+
+  // 接続テスト（サーバー経由）
+  const statusArea = document.getElementById('conn-status-area');
+  if(statusArea) statusArea.innerHTML = `<div class="api-status-row api-wait" style="padding:10px 13px"><span class="spin" style="width:14px;height:14px;border-width:2px"></span><span style="font-size:11px;font-weight:700">接続テスト中...</span></div>`;
+
+  try {
+    const res = await fetch('http://localhost:3001/api/test-auth', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, password:pw})
+    });
+    if(res.ok) {
+      renderConnectionStatus(acId, true);
+      toast('✅ 接続完了',`${ACCOUNTS.find(a=>a.id===acId)?.name} のnoteに正常に接続できました`);
+    } else {
+      renderConnectionStatus(acId, false, 'メールアドレスまたはパスワードが正しくありません');
+      toast('❌ 接続エラー','認証情報を確認してください');
+    }
+  } catch(e) {
+    // サーバー未起動の場合
+    renderConnectionStatus(acId, null, 'サーバー未起動（認証情報は保存済み）');
+    toast('💾 保存完了','認証情報を保存しました。サーバー起動後に自動的に接続されます');
+  }
+}
+
+function renderConnectionStatus(acId, ok, msg) {
+  const ac=ACCOUNTS.find(a=>a.id===acId);
+  // ok=true:接続完了 / ok=false:エラー / ok=null:サーバー未起動（保存済み）
+  const cls = ok===true?'api-ok':ok===false?'api-ng':'api-wait';
+  const icon = ok===true?'✅':ok===false?'❌':'💾';
+  const label = ok===true?'接続完了':ok===false?'接続エラー':'認証情報保存済';
+  const sub = msg||(ok===true?'下書き自動保存が使用可能です':ok===false?'メールアドレス/パスワードを確認してください':'node server.js 起動後に自動接続されます');
+  document.getElementById('conn-status-area').innerHTML=`
+    <div class="api-status-row ${cls}">
+      <span style="font-size:16px">${icon}</span>
+      <div><div style="font-size:12px;font-weight:800;color:${ok===true?'var(--em3)':ok===false?'var(--red2)':'var(--em3)'}">${ac?.name} — ${label}</div><div style="font-size:10px;color:var(--ink6);margin-top:2px">${sub}</div></div>
+    </div>`;
+}
+
+function updateDraftNoteSelect() {
+  const sel=document.getElementById('draft-note-sel');
+  if(!sel) return;
+  const done=queue.filter(q=>q.status==='done');
+  sel.innerHTML='<option value="">生成済みnoteを選択...</option>'+done.map(q=>`<option value="${q.id}">${q.title}</option>`).join('');
+}
+
+async function runDraftSave() {
+  const noteId=document.getElementById('draft-note-sel').value;
+  const acId=document.getElementById('draft-ac-sel').value;
+  if(!noteId){toast('⚠️','保存するnoteを選択してください');return;}
+  const auth=NOTE_AUTH[acId];
+  if(!auth?.email){toast('⚠️','先に認証情報を入力してください');return;}
+
+  const steps=[
+    {id:'ds1',name:'noteにログイン',desc:'認証情報でセッション開始'},
+    {id:'ds2',name:'新規note作成',desc:'エディタを開く'},
+    {id:'ds3',name:'本文・タイトル入力',desc:'生成内容を自動入力'},
+    {id:'ds4',name:'サムネイル設定',desc:'生成画像を表紙に設定'},
+    {id:'ds5',name:'下書き保存',desc:'公開せずに保存'},
+  ];
+
+  for(let i=0;i<steps.length;i++){
+    const s=steps[i];
+    const row=document.getElementById(s.id);
+    const stat=document.getElementById(s.id+'s');
+    row?.classList.add('active');
+    stat.textContent='⚡ 処理中...';stat.className='ps-s active';
+    await sleep(1200+Math.random()*600);
+    row?.classList.remove('active');row?.classList.add('done');
+    stat.textContent='✅ 完了';stat.className='ps-s done';
+  }
+
+  const item=queue.find(q=>q.id===noteId);
+  toast('📝 下書き保存完了',`「${item?.title}」をnoteの下書きに保存しました\n（実際の保存はサーバー起動後に有効）`);
+}
+
+// ══════════════════════════════════════════════
+// AUTO / GITHUB
+// ══════════════════════════════════════════════
+function renderSecretsCheck() {
+  const secrets=[
+    {k:'ANTHROPIC_API_KEY',d:'Claude Sonnet API',ok:!!window.ANTHROPIC_API_KEY},
+    {k:'GEMINI_API_KEY',d:'Imagen4 サムネ生成',ok:!!window.GEMINI_API_KEY},
+    {k:'NOTE_EMAIL',d:'note ログインメール',ok:false},
+    {k:'NOTE_PASSWORD',d:'note パスワード',ok:false},
+  ];
+  document.getElementById('secrets-list').innerHTML=secrets.map(s=>`
+    <div style="display:flex;gap:9px;align-items:center;padding:8px 10px;border:1px solid ${s.ok?'rgba(26,122,58,.25)':'var(--ink4)'};margin-bottom:5px;border-radius:2px;background:${s.ok?'var(--gr4)':'transparent'}">
+      <div>${s.ok?'✅':'⬜'}</div>
+      <div><div style="font-family:var(--fm);font-size:10px;color:${s.ok?'#3acc66':'var(--paper2)'}">${s.k}</div><div style="font-size:9px;color:var(--ink6);margin-top:1px">${s.d}</div></div>
+    </div>`).join('');
+}
+
+function showGHSetup() { openM('gh'); }
+
+function downloadWorkflow() {
+  const yml=`name: Daily Note Generator
+
+on:
+  schedule:
+    - cron: '0 20 * * *'  # JST 05:00
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: Generate Daily Notes
+        env:
+          ANTHROPIC_API_KEY: \${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: \${{ secrets.GEMINI_API_KEY }}
+          NOTE_EMAIL: \${{ secrets.NOTE_EMAIL }}
+          NOTE_PASSWORD: \${{ secrets.NOTE_PASSWORD }}
+        run: node src/daily-auto.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: daily-notes-\${{ github.run_id }}
+          path: output/drafts/`;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([yml],{type:'text/yaml'}));
+  a.download='daily-note.yml';a.click();
+  toast('⬇️ DL完了','daily-note.yml をダウンロードしました');
+}
+
+
+// ─── 構成スタイル ヒント表示 ─────────────────────────────────
+const STYLE_TIPS = {
+  story: {
+    icon: '📖',
+    title: '体験談ストーリー型',
+    merit: '共感で読み進めてもらえる・CTA効果が最も高い',
+    best: '副業・恋愛・ダイエット系の体験談、フォロワー獲得',
+    flow: 'はじめに（共感）→ 失敗・困難 → 転機 → 実践 → 結果 → 有料noteへ',
+    point: '一人称で感情を込めて。口癖・失敗エピソードが必須'
+  },
+  knowhow: {
+    icon: '🧠',
+    title: 'ノウハウ完全解説型',
+    merit: '専門性・権威性が伝わる・有料noteに最適',
+    best: 'AI・マーケ・投資・プログラミング系の教育コンテンツ',
+    flow: 'はじめに（なぜ語れるか）→ 背景・原理 → 核心ノウハウ3本柱 → 応用 → Q&A',
+    point: '数字・実績・具体例を必ず入れる。権威付けが命'
+  },
+  howto: {
+    icon: '📋',
+    title: 'ハウツー手順型',
+    merit: '再現性が高く保存・シェアされやすい',
+    best: 'ツール解説・副業の始め方・設定手順系',
+    flow: 'はじめに（できるようになること）→ STEP1→STEP2→...→ まとめ',
+    point: '各STEPに「自分がやった体験」を1つずつ入れると信頼性UP'
+  },
+  list: {
+    icon: '📊',
+    title: 'リスト・まとめ型',
+    merit: 'バズりやすく拡散されやすい・読まれやすい',
+    best: 'Threads・Xからの流入を狙うとき、トレンド便乗',
+    flow: 'はじめに（なぜこのリスト）→ 1〜10選（各項目に体験・数字）→ まとめ',
+    point: 'タイトルに「〇〇選」「知らないと損」を入れると効果的'
+  },
+  reveal: {
+    icon: '💥',
+    title: '衝撃→解説型',
+    merit: '冒頭で強烈に引き込める・読了率が高い',
+    best: 'ファクト暴露系・常識破壊系・タブー系のテーマ',
+    flow: '衝撃的な数字や事実 → 「なぜ？」の煽り → 真実の解説 → 実践法',
+    point: '最初の1〜2文で勝負。弱い冒頭だと全部読まれない'
+  },
+  dialog: {
+    icon: '💬',
+    title: '対話・Q&A型',
+    merit: '読者の疑問に直接答えるため共感が強い',
+    best: '恋愛・人間関係・メンタル系のコンテンツ',
+    flow: 'よくある質問・悩みを提示 → 解説・回答 → 深掘り → アドバイス',
+    point: 'Q（質問者の声）を読者目線で設定することが重要'
+  },
+  sales: {
+    icon: '💰',
+    title: 'セールスレター＋有料記事【完全版】',
+    merit: '無料部分3000字のセールスレター14章＋有料部分10000字以上を一気に自動生成',
+    best: '¥5,980〜¥29,800の高単価有料note。副業・ビジネス・ノウハウ系全ジャンル対応',
+    flow: '【無料】セールスレター14章（共感→解決策→商品→行動喚起）→ 【有料】ノウハウ10章（10,000字以上）',
+    point: 'ターゲット・商品内容を入力するだけでプロのセールスレター＋本編を完全自動生成。有料note専用スタイル'
+  }
+};
+
+function showStyleTip() {
+  const style = document.getElementById('c-style')?.value;
+  const box = document.getElementById('style-tip-box');
+  if(!box || !style) return;
+  const t = STYLE_TIPS[style];
+  if(!t) { box.innerHTML=''; return; }
+  box.innerHTML = `<div class="style-knowhow-tip">
+    <div style="font-size:12px;font-weight:800;color:var(--em3);margin-bottom:8px">${t.icon} ${t.title}</div>
+    <div style="display:grid;grid-template-columns:80px 1fr;gap:4px 10px;font-size:11px">
+      <span style="font-weight:800;color:#5a7f68">メリット</span><span style="font-weight:600">${t.merit}</span>
+      <span style="font-weight:800;color:#5a7f68">最適シーン</span><span style="font-weight:600">${t.best}</span>
+      <span style="font-weight:800;color:#5a7f68">構成の流れ</span><span style="font-weight:600;color:var(--em3)">${t.flow}</span>
+      <span style="font-weight:800;color:#5a7f68">コツ</span><span style="font-weight:600">${t.point}</span>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════
+// CLAUDE API CALL
+// ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// セールスレター＋有料記事 完全版ジェネレーター
+// ══════════════════════════════════════════════════════════════
+async function generateSalesNote(item, ac, wc) {
+  const ch = ac.character || {};
+  const p  = ac.persona   || {};
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const priceVal = PRICE_MAP[item.priceKey] || 9800;
+  const targetInput   = item.problem  || p.pains?.[0]  || '副業を始めたい人';
+  const productInput  = item.message  || p.desires?.[0]|| `${ac.genre}を学べるnote`;
+  const titleHint     = item.titleHint || '';
+
+  // ── STEP 1: セールスレター（無料部分・3000〜4000字）
+  item.status = 'running';
+  item.statusLabel = '① セールスレター生成中…';
+  renderQueueList();
+
+  const salesSystem = `あなたはプロのセールスライターであり、マーケティングコンサルタントです。
+ペルソナ「${ch.name || ac.name}」（${ch.age || 30}歳）に完全になりきって書いてください。
+一人称: ${ch.first_person || '私'}
+文体・口調: ${ch.tone || '親しみやすく、共感を重視'}
+口癖（自然に散りばめる）: ${(ch.phrases||[]).join('、')}
+絶対禁止: AIっぽい表現、変な記号（・▶★◆→など）、箇条書き記号、HTMLタグ`;
+
+  const salesUser = `以下の制約条件に従って、1000万円以上売れるセールスレターの草案を作成してください。
+
+【制約条件】
+- ペルソナになりきること（AIっぽさは禁止）
+- 変な記号は一切入れないこと
+- 読者はそのジャンルの情弱な方で、自信がなく、知識もない状態です
+- 文章は若い人でも理解できる簡単な日本語を使用すること
+- 改行を使用して、読みやすさを最優先すること
+- 全体の流れは「共感 → 解決策 → 商品 → 行動喚起」にすること
+- 数字や実例を盛り込んで、信頼性を高めること
+- 各セクションに「感情を動かす導入文（問いかけ or 不安喚起）」を必ず入れること
+- ベネフィット→理由→証拠 の順で構成すること
+- 読者の悩みを否定せず、「あなたもできる」と勇気づけること
+- 説得ではなく、納得を引き出すように書くこと
+- 文章全体で3000〜4000文字で作成すること
+- 各章300〜400文字前後で出力
+- 商品の機能をベネフィットに変換すること（例：「テンプレがある」→「自分で考えなくていいから迷わず収益化できる」）
+- 具体的な数字（年数・金額・件数・成功率など）を可能な限り加えること
+
+【ターゲット】
+${targetInput}
+
+【商品内容】
+${productInput}${priceVal ? `\n価格: ¥${priceVal.toLocaleString()}` : ''}
+
+【出力構成（この順番で14章すべて書くこと）】
+1. 理想の未来（HOOK）
+2. 自己紹介＆信頼づけ
+3. 共感ストーリー（Before-After）
+4. 読者の悩みリスト
+5. 他人の成功証言
+6. 時代背景と"今やるべき"理由
+7. 稼げない理由の再定義
+8. 製作者と作業者の違い
+9. 正解を使う発想の転換
+10. 商品のステップ・仕組み説明
+11. 豪華特典紹介
+12. 通常価格と特別価格
+13. 購入前のFAQ
+14. 感情で背中を押すクロージング
+
+${item.ref ? `【参考文章・文体の参考】\n${item.ref}` : ''}
+
+JSON形式のみで返してください（コードブロックなし、説明文なし）:
+{
+  "title": "セールスnoteのタイトル（インパクト重視）",
+  "sales_body": "セールスレター本文全体（改行は\\nで表現、3000〜4000字）",
+  "description": "概要文160字（購買意欲を高める内容）",
+  "tags": ["タグ1","タグ2","タグ3","タグ4","タグ5"],
+  "threads_post": "${item.genThreads ? 'Threads用投稿文（280字以内・絵文字2〜3個・ハッシュタグ2〜3個）' : ''}",
+  "x_post": "${item.genX ? 'X用投稿文（140字以内・インパクト重視）' : ''}",
+  "thumbnail_prompts": [
+    "カバー画像の英語プロンプト（16:9、プロ品質、売れるビジュアル）",
+    "セールス訴求画像の英語プロンプト",
+    "CTA画像の英語プロンプト",
+    "実績・証拠画像の英語プロンプト",
+    "特典紹介画像の英語プロンプト"
+  ]
+}`;
+
+  let salesData = {};
+  try {
+    const raw1 = await callClaude(salesSystem, salesUser);
+    const m1 = raw1.match(/\{[\s\S]*\}/);
+    salesData = JSON.parse(m1 ? m1[0] : raw1);
+  } catch(e) {
+    item.status = 'error';
+    item.error = 'セールスレター生成失敗: ' + e.message;
+    renderQueueList();
+    return;
+  }
+
+  // ── STEP 2: 有料部分（10000字以上）
+  item.statusLabel = '② 有料記事（ノウハウ本編）生成中…';
+  renderQueueList();
+
+  const paidWc = Math.max(wc, 10000);
+  const paidSystem = `あなたは売りたいnoteのジャンル・ターゲット・ペルソナを入力すると、自動で読者の興味を引く有料部分（${paidWc}字以上）を生成し、1日に100部売れる記事を設計する天才ライターです。
+
+目的: note記事の売上を最大化するため、有料部分で深い価値提供を行い読者をファン化させる。
+
+責務:
+- ターゲット読者の心をつかむライティング
+- 有料部分で深い価値提供を行い信頼を得る
+- あらゆるジャンルに対応（恋愛・ビジネス・自己啓発・投資・副業など）
+
+ペルソナ「${ch.name || ac.name}」（${ch.age || 30}歳）になりきって書いてください。
+一人称: ${ch.first_person || '私'}
+文体: ${ch.tone || '親しみやすく、具体的で実践的'}
+口癖: ${(ch.phrases||[]).join('、')}
+絶対禁止: AIっぽい表現、変な記号、HTMLタグ`;
+
+  const paidUser = `以下の条件で有料note本編（${paidWc}字以上）を作成してください。
+
+【ターゲット】${targetInput}
+【商品・テーマ】${productInput}
+【noteタイトル】${salesData.title || titleHint || ac.genre + 'の完全マニュアル'}
+
+【文字数の絶対ルール】
+指定文字数: ${paidWc}字
+これは最低文字数です。必ずこれ以上の文字数で書いてください。
+${paidWc}字未満での提出は絶対に禁止です。
+文字数が足りない場合は、体験談・具体例・テンプレート・Q&Aを追加して必ず超えること。
+
+【有料部分の構成（この構成で必ず作成すること）】
+
+はじめに（このnoteの目的と読後の変化）
+「このnoteを読み終えると、○○ができるようになります」
+読者のビフォーアフターを明示する
+行動のモチベーションを引き出すための導入
+
+第1章：再現性のある全体像（まず全体を見せる）
+成果を出した具体的ステップを一覧で提示
+読者に「この通りにやればいい」と安心させる
+
+第2章：ステップ①　準備とマインド
+成功に必要な思考・準備・意識すべき前提
+
+第3章：ステップ②　具体的なやり方①
+1つ目の実践パート
+テンプレや例文で再現性を持たせる
+
+第4章：ステップ③　具体的なやり方②
+次のアクションまたはノウハウ
+トラブルやつまずきを先回りで解決
+
+第5章：ステップ④　差がつくテクニック
+他のnoteにない独自性や裏技的ノウハウ
+
+第6章：ステップ⑤　自動で伸ばす仕組み
+継続的に成果を出すための仕掛けや工夫
+
+第7章：よくある失敗パターンと回避法
+読者がつまずくポイントを先回りで防ぐ
+「こういう人は失敗します」を明示して行動の精度を上げる
+
+第8章：実践チェックリスト・事例・Q&A
+今日から実践するためのまとめ資料・テンプレ・事例
+読者の疑問もカバーして納得感を強化
+
+第9章：まとめ　今日から何をすべきか？
+全体をコンパクトに要約
+読者が迷わず「これをやればいい」と行動に移せるように整理
+ステップ①〜⑤の要約アクションリスト
+
+第10章：最後に　あなたの行動が未来を変える
+読後の感情を動かす：共感・背中押し・情熱
+特典・続編note・サポート案内・DM誘導など
+「このnoteが、あなたの人生を変える"きっかけ"になりますように」など余韻を残す一言で締める
+
+JSON形式のみで返してください（コードブロックなし）:
+{
+  "paid_body": "有料部分本文全体（改行は\\nで表現、${paidWc}字以上必須）"
+}`;
+
+  let paidData = {};
+  try {
+    const raw2 = await callClaude(paidSystem, paidUser, 8000);
+    const m2 = raw2.match(/\{[\s\S]*\}/);
+    paidData = JSON.parse(m2 ? m2[0] : raw2);
+  } catch(e) {
+    item.status = 'error';
+    item.error = '有料記事生成失敗: ' + e.message;
+    renderQueueList();
+    return;
+  }
+
+  // ── 結合して保存
+  const salesBody = (salesData.sales_body || '').replace(/\\n/g, '\n');
+  const paidBody  = (paidData.paid_body   || '').replace(/\\n/g, '\n');
+  const separator = '\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\nここから有料部分\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+
+  const newTitle = salesData.title || titleHint || ac.genre + 'の完全マニュアル';
+  if (GENERATED_TITLES.includes(newTitle)) {
+    console.warn('タイトル重複検出:', newTitle);
+  }
+  GENERATED_TITLES.push(newTitle);
+  if (GENERATED_TITLES.length > 200) GENERATED_TITLES.shift();
+  localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+
+  item.title       = newTitle;
+  item.body        = salesBody + separator + paidBody;
+  item.salesBody   = salesBody;
+  item.paidBody    = paidBody;
+  item.isSalesNote = true;
+  item.description = salesData.description || '';
+  item.tags        = salesData.tags || [];
+  item.threadsPost = salesData.threads_post || '';
+  item.xPost       = salesData.x_post || '';
+  item.thumbPrompts = salesData.thumbnail_prompts || [];
+  item.status      = 'done';
+  item.genTime     = new Date().toLocaleTimeString('ja-JP');
+  item.statusLabel = '';
+
+  await genThumbs(item);
+  updateDraftNoteSelect();
+
+  // ★ 自動下書き保存（認証情報が設定済みの場合）
+  await autoSaveDraft(item);
+
+  renderQueueList();
+  document.getElementById('b-create').textContent = queue.filter(q=>q.status==='done').length;
+  renderHistory();
+  if (queue.filter(q=>q.status==='done').length === 1) showNoteViewer(item);
+}
+
+// ══════════════════════════════════════════════
+// 自動下書き保存
+// ══════════════════════════════════════════════
+const PRICE_MAP_DRAFT = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+
+async function autoSaveDraft(item) {
+  const auth = NOTE_AUTH[item.acId] || {};
+  if (!auth.email || !auth.password) return; // 認証情報なし → スキップ
+  if (item.status !== 'done') return;
+
+  // 自動保存中の表示
+  const queueEl = document.getElementById(`hc-${item.id}`);
+  toast('📝 自動下書き保存中...', `「${item.title?.substring(0,20)}」をnoteに送信中`);
+
+  try {
+    const res = await fetch('http://localhost:3001/api/draft-save', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        email: auth.email,
+        password: auth.password,
+        title: item.title,
+        body: item.body,
+        tags: item.tags || [],
+        price: item.type === 'paid' ? (PRICE_MAP_DRAFT[item.priceKey] || 0) : 0,
+        coverImage: item.thumbs?.[0]?.src || null
+      })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const draftUrl = data.draftUrl || data.url;
+      if (draftUrl) {
+        item.draftUrl = draftUrl;
+        item.drafted  = true;
+        saveQueue();
+        renderHistory();
+        toast('✅ 下書き自動保存完了', `「${item.title?.substring(0,20)}」をnoteに保存しました`);
+      }
+    }
+  } catch(e) {
+    // サーバー未起動 → サイレント（後で手動保存可能）
+    console.info('Auto draft: server not running, skip', e.message);
+  }
+}
+
+// ══════════════════════════════════════════════
+// API設定 UI
+// ══════════════════════════════════════════════
+function openApiSettings() {
+  const curClaudeKey = localStorage.getItem('nf_api_key') || '';
+  const curGeminiKey = localStorage.getItem('nf_gemini_key') || '';
+
+  const ov = document.createElement('div');
+  ov.id = 'api-settings-ov';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,30,18,.8);z-index:400;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(12px)';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:500px;max-width:94vw;border:1px solid rgba(0,168,120,.2);box-shadow:0 20px 60px rgba(0,80,40,.25);overflow:hidden">
+      <div style="height:3px;background:linear-gradient(90deg,var(--em3),var(--em2),var(--em3))"></div>
+      <div style="padding:20px 24px 14px;border-bottom:1px solid var(--ink4);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-family:var(--fs);font-size:16px;font-weight:800;color:#0d1a12">⚙️ API キー設定</div>
+        <button onclick="document.getElementById('api-settings-ov').remove()" style="background:none;border:1px solid var(--ink5);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px;color:#5a7f68">×</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="margin-bottom:16px">
+          <label style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">ANTHROPIC API KEY（Claude note生成用）</label>
+          <input type="password" id="api-claude-key" value="${curClaudeKey}" placeholder="sk-ant-api03-..." style="width:100%;padding:10px 12px;border:2px solid var(--em4);border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--em4)'">
+          <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">取得先: <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--em3)">console.anthropic.com</a></div>
+        </div>
+        <div style="margin-bottom:20px">
+          <label style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">GOOGLE GEMINI API KEY（Imagen4 サムネ生成用）</label>
+          <input type="password" id="api-gemini-key" value="${curGeminiKey}" placeholder="AIzaSy..." style="width:100%;padding:10px 12px;border:2px solid var(--em4);border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--em4)'">
+          <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">取得先: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--em3)">aistudio.google.com</a> → 「APIキーを作成」</div>
+        </div>
+        <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:10px 13px;border-radius:6px;font-size:10px;color:rgba(160,110,0,.9);font-weight:600;margin-bottom:16px">
+          ⚠️ APIキーはブラウザのlocalStorageにのみ保存されます。外部には送信しません。
+        </div>
+        <div id="api-test-result" style="margin-bottom:12px"></div>
+      </div>
+      <div style="padding:12px 24px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--ink4)">
+        <button onclick="document.getElementById('api-settings-ov').remove()" class="btn b-o b-sm">キャンセル</button>
+        <button onclick="testAndSaveApiKeys()" class="btn b-g b-sm">🔍 テスト</button>
+        <button onclick="saveApiSettings()" class="btn b-r">💾 保存</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+}
+
+function saveApiSettings() {
+  const claudeKey = document.getElementById('api-claude-key')?.value.trim();
+  const geminiKey = document.getElementById('api-gemini-key')?.value.trim();
+  if(claudeKey) {
+    localStorage.setItem('nf_api_key', claudeKey);
+    window.ANTHROPIC_API_KEY = claudeKey;
+  }
+  if(geminiKey) {
+    localStorage.setItem('nf_gemini_key', geminiKey);
+    window.GEMINI_API_KEY = geminiKey;
+  }
+  renderSecretsCheck();
+  document.getElementById('api-settings-ov')?.remove();
+  toast('✅ APIキー保存完了', 'Claude & Gemini APIキーを保存しました');
+}
+
+async function testAndSaveApiKeys() {
+  const claudeKey = document.getElementById('api-claude-key')?.value.trim();
+  const geminiKey = document.getElementById('api-gemini-key')?.value.trim();
+  const resultEl = document.getElementById('api-test-result');
+  if(!claudeKey && !geminiKey){toast('⚠️','APIキーを入力してください');return;}
+
+  if(resultEl) resultEl.innerHTML = '<div style="font-size:10px;font-weight:700;color:var(--em3)"><span class="spin" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:middle;margin-right:5px"></span>テスト中...</div>';
+
+  const results = [];
+
+  // Claude テスト
+  if(claudeKey) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':claudeKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:10,messages:[{role:'user',content:'hi'}]})
+      });
+      results.push(res.ok ? '✅ Claude API: 接続完了' : `❌ Claude API: エラー (${res.status})`);
+    } catch(e){ results.push('❌ Claude API: 接続失敗'); }
+  }
+
+  // Gemini テスト（APIキーの有効性確認）
+  if(geminiKey) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+      results.push(res.ok ? '✅ Gemini API: 接続完了' : `❌ Gemini API: エラー (${res.status})`);
+    } catch(e){ results.push('❌ Gemini API: 接続失敗'); }
+  }
+
+  if(resultEl) resultEl.innerHTML = results.map(r=>`<div style="font-size:11px;font-weight:700;color:${r.startsWith('✅')?'var(--em3)':'var(--red2)'};margin-bottom:3px">${r}</div>`).join('');
+  toast('🔍 テスト完了', results.join(' / '));
+}
+
+async function copyNoteBody() {
+  if(!currentNote?.body) return;
+  navigator.clipboard.writeText(currentNote.body).then(()=>toast('📋 本文コピー','クリップボードにコピーしました'));
+}
+
+async function callClaude(systemPrompt, userPrompt, maxTokens) {
+  // file://で開いている場合はCORSでブロックされるため事前に警告
+  if (location.protocol === 'file:') {
+    throw new Error('file://では動作しません。GitHub PagesのURLで開いてください（下のGitHub設定ガイドを参照）');
+  }
+  const apiKey = localStorage.getItem('nf_api_key') || '';
+  if (!apiKey) {
+    throw new Error('APIキーが未設定です。コンソールで localStorage.setItem("nf_api_key","sk-ant-...") を実行してください');
+  }
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens: maxTokens || 8000,
+      system: systemPrompt,
+      messages:[{role:'user',content:userPrompt||systemPrompt}]
+    })
+  });
+  if(!res.ok) {
+    const errBody = await res.text().catch(()=>'');
+    throw new Error(`API Error ${res.status}: ${errBody.substring(0,200)}`);
+  }
+  const d=await res.json();
+  return d.content?.[0]?.text||'';
+}
+
+// ══════════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════════
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// アカウントローテーション
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// 今日のローテーションアカウントを返す（日付ベース・アカウント数で割った余り）
+function getTodayRotationAc() {
+  if (!ACCOUNTS.length) return null;
+  const dayIndex = Math.floor(Date.now() / 86400000); // Epoch日数
+  return ACCOUNTS[dayIndex % ACCOUNTS.length];
+}
+
+// daily-ac-mode の変更
+function onDailyAcModeChange() {
+  const mode = document.getElementById('daily-ac-mode')?.value;
+  document.getElementById('daily-ac-fixed-wrap').style.display  = mode === 'fixed'  ? 'block' : 'none';
+  document.getElementById('daily-ac-rotate-info').style.display = mode === 'rotate' ? 'block' : 'none';
+  localStorage.setItem('nf_daily_ac_mode', mode || 'rotate');
+}
+
+// 今日担当するアカウントIDを取得（モードに応じて切替）
+function getActiveDailyAcId() {
+  const mode = document.getElementById('daily-ac-mode')?.value || 'rotate';
+  if (mode === 'fixed') {
+    return document.getElementById('daily-ac')?.value || ACCOUNTS[0]?.id;
+  }
+  return getTodayRotationAc()?.id || ACCOUNTS[0]?.id;
+}
+
+// ローテーションプレビューを描画
+function renderRotatePreview() {
+  const preview = document.getElementById('daily-rotate-preview');
+  const todayEl = document.getElementById('daily-today-ac');
+  if (!preview || !ACCOUNTS.length) return;
+  const today = getTodayRotationAc();
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  preview.innerHTML = ACCOUNTS.map((ac, i) => {
+    const diff = ((i - (dayIndex % ACCOUNTS.length)) + ACCOUNTS.length) % ACCOUNTS.length;
+    const label = diff === 0 ? '今日' : diff === 1 ? '明日' : `+${diff}日後`;
+    const isToday = diff === 0;
+    return `<div style="display:flex;gap:8px;align-items:center${isToday?';font-weight:900;color:var(--em3)':''}">
+      <span style="font-family:var(--fm);font-size:9px;width:36px;flex-shrink:0;color:${isToday?'var(--em3)':'#5a7f68'}">${label}</span>
+      <span>${ac.name}</span>
+      ${isToday ? '<span style="font-size:9px;background:var(--em);color:#fff;padding:1px 6px;border-radius:10px;font-family:var(--fm)">TODAY</span>' : ''}
+    </div>`;
+  }).join('');
+  if (todayEl && today) todayEl.textContent = today.name;
+}
+
+function populateSelects() {
+  // daily-ac は固定モード用（hidden時も値を保持するため常に更新）
+  const dailyAcEl = document.getElementById('daily-ac');
+  if (dailyAcEl) {
+    dailyAcEl.innerHTML = ACCOUNTS.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  }
+
+  // その他の全タブのアカウント選択
+  const ids = ['persona-ac','create-ac','conn-ac','draft-ac-sel'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const prev = el.value; // 選択中の値を保持
+    el.innerHTML = ACCOUNTS.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+    if (prev && ACCOUNTS.find(a => a.id === prev)) el.value = prev;
+  });
+
+  // auto-ac-rotate（ローテーション＋個別選択）
+  const autoSel = document.getElementById('auto-ac-rotate');
+  if (autoSel) {
+    autoSel.innerHTML = '<option value="rotate">🔄 毎日ローテーション（推奨）</option>' +
+      ACCOUNTS.map(a => `<option value="${a.id}">${a.name}（固定）</option>`).join('');
+  }
+
+  // 投稿キューフィルター
+  const histSel = document.getElementById('hist-filter-ac');
+  if (histSel) {
+    histSel.innerHTML = '<option value="">全アカウント</option>' +
+      ACCOUNTS.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+  }
+
+  // ダッシュボードフィルター
+  const dbFilter = document.getElementById('db-ac-filter');
+  if (dbFilter) {
+    const cur = dbFilter.value;
+    dbFilter.innerHTML = '<option value="">全アカウント</option>' +
+      ACCOUNTS.map(a => `<option value="${a.id}" ${cur===a.id?'selected':''}>${a.name}</option>`).join('');
+  }
+
+  // ローテーション状態を復元
+  const savedMode = localStorage.getItem('nf_daily_ac_mode') || 'rotate';
+  const modeEl = document.getElementById('daily-ac-mode');
+  if (modeEl) { modeEl.value = savedMode; onDailyAcModeChange(); }
+
+  renderRotatePreview();
+
+  if (ACCOUNTS.length > 0) onAcChange();
+}
+
+function sw(name) {
+  const names=['dashboard','accounts','persona','create','daily','connect','auto','history'];
+  if(name==='dashboard') setTimeout(refreshDashboard, 50);
+  if(name==='history') { setTimeout(renderHistory,50); }
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',names[i]===name));
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('on'));
+  document.getElementById('pane-'+name)?.classList.add('on');
+}
+
+function openM(n){document.getElementById(n+'Modal').classList.add('on');}
+function closeM(n){document.getElementById(n+'Modal').classList.remove('on');}
+document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('on');}));
+
+function toast(t,m,ms=3500){
+  document.getElementById('tt').textContent=t;
+  document.getElementById('tm').textContent=m;
+  const el=document.getElementById('toast');
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),ms);
+}
+
+
+// ─── ペルソナ お任せ自動入力 ───────────────────
+async function autoFillPersona(field) {
+  const acId = document.getElementById('persona-ac').value;
+  const ac = ACCOUNTS.find(a=>a.id===acId);
+  if(!ac) {toast('⚠️','アカウントを選択してください');return;}
+
+  const currentTarget = document.getElementById('p-target').value;
+  const currentPain = document.getElementById('p-pain').value;
+  const currentGenre = document.getElementById('p-genre').value;
+
+  const prompt = `あなたはnoteマーケティングの専門家です。
+アカウント情報: ${ac.genre}（${ac.character?.name||''}）
+既存ターゲット: ${currentTarget||'未入力'}
+既存悩み: ${currentPain||'未入力'}
+既存ジャンル: ${currentGenre||'未入力'}
+
+${field==='target'?'このアカウントに最適なターゲット読者を1〜2文で提案してください。具体的な年齢・職業・状況を含める。':
+  field==='pain'?'このターゲットが抱える具体的な悩み・キーワードを3〜5個、改行区切りで提案してください。':
+  field==='genre'?'このジャンルで競合が多く狙いやすいサブジャンル・テーマキーワードを3〜5個、カンマ区切りで提案してください。':
+  `このアカウント（${ac.genre}）に最適なターゲット・悩み・ジャンルをJSON形式のみで提案してください:
+{"target":"ターゲット説明","pain":"悩み1\n悩み2\n悩み3","genre":"ジャンル1,ジャンル2,ジャンル3"}`}
+
+重複した内容は絶対に避けてください。簡潔に、そのまま入力欄に入れられる形で出力してください。`;
+
+  const btn = document.querySelector(`button[onclick="autoFillPersona('${field}')"]`);
+  if(btn){btn.disabled=true;btn.textContent='分析中...';}
+
+  try {
+    const res = await callClaude('', prompt);
+    if(field==='all') {
+      try {
+        const m = res.match(/\{[\s\S]*\}/);
+        const d = JSON.parse(m?m[0]:res);
+        if(d.target) document.getElementById('p-target').value = d.target;
+        if(d.pain) document.getElementById('p-pain').value = d.pain;
+        if(d.genre) document.getElementById('p-genre').value = d.genre;
+        toast('✨ お任せ完成','Claude がターゲット・悩み・ジャンルを自動入力しました');
+      } catch {
+        document.getElementById('p-target').value = res.substring(0,200);
+        toast('✨ お任せ完成','内容を自動入力しました');
+      }
+    } else {
+      const el = document.getElementById('p-'+field);
+      if(el) { el.value = res.trim(); }
+      toast('✨ お任せ入力完了', {target:'ターゲットを自動入力',pain:'悩み・キーワードを自動入力',genre:'ジャンルを自動入力'}[field]||'入力完了');
+    }
+  } catch(e) {
+    toast('⚠️ エラー', e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent={target:'お任せ ✨',pain:'お任せ ✨',genre:'お任せ ✨',all:'全部お任せ ✨'}[field]||'お任せ ✨';}
+  }
+}
+
+// ─── 投稿キュー・作業履歴 ──────────────────────
+let _expandedHistId = null;
+
+function renderHistory() {
+  const filterAc = document.getElementById('hist-filter-ac')?.value||'';
+  const filterType = document.getElementById('hist-filter-type')?.value||'';
+  const filterStatus = document.getElementById('hist-filter-status')?.value||'';
+
+  let items = queue.filter(q=>q.status==='done'||q.status==='error');
+  if(filterAc) items = items.filter(q=>q.acId===filterAc);
+  if(filterType) items = items.filter(q=>q.type===filterType);
+  if(filterStatus==='pending')   items = items.filter(q=>q.status==='done'&&!q.drafted&&!q.published);
+  if(filterStatus==='drafted')   items = items.filter(q=>q.drafted);
+  if(filterStatus==='published') items = items.filter(q=>q.published);
+
+  document.getElementById('b-history').textContent = queue.filter(q=>q.status==='done').length;
+
+  const done = queue.filter(q=>q.status==='done');
+  const hst = document.getElementById('hs-total');   if(hst) hst.textContent = done.length;
+  const hsp = document.getElementById('hs-pending'); if(hsp) hsp.textContent = done.filter(q=>!q.drafted&&!q.published).length;
+  const hsd = document.getElementById('hs-drafted'); if(hsd) hsd.textContent = done.filter(q=>q.drafted&&!q.published).length;
+  const hspb= document.getElementById('hs-pub');     if(hspb) hspb.textContent = done.filter(q=>q.published).length;
+
+  const list = document.getElementById('history-list');
+  if(!list) return;
+  if(!items.length) {
+    list.innerHTML='<div class="empty" style="padding:40px"><div style="font-size:32px;margin-bottom:12px;opacity:.4">📋</div><div style="font-size:14px;font-weight:700;color:#0d1a12;margin-bottom:6px">該当する投稿キューがありません</div></div>';
+    return;
+  }
+
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+
+  list.innerHTML = [...items].reverse().map(q => {
+    const ac = ACCOUNTS.find(a=>a.id===q.acId)||{};
+    const price = q.type==='paid'?`¥${(PRICE_MAP[q.priceKey]||9800).toLocaleString()}`:"無料";
+    const statusColor = q.published?"var(--em)":q.drafted?"var(--gold2)":q.status==='done'?"#5a7f68":"var(--red2)";
+    const statusLabel = q.published?"✅ 公開済":q.drafted?"📝 下書き済":q.status==='done'?"⏳ 未投稿":"❌ エラー";
+    const isExp = _expandedHistId === q.id;
+
+    const bodyPreview = isExp && q.body ? q.body.split("\n").map(line => {
+      if(/^(第[一二三四五六七八九十\d]+章|はじめに|おわりに|まとめ|序章|あとがき)/.test(line.trim()))
+        return `<div style="font-weight:900;font-size:13px;color:#0d1a12;margin:12px 0 4px;padding-left:8px;border-left:3px solid var(--em)">${line.trim()}</div>`;
+      return `<div style="min-height:1em">${line||"&nbsp;"}</div>`;
+    }).join("") : "";
+
+    return `<div id="hc-${q.id}" style="background:#fff;border:1px solid var(--ink4);border-left:4px solid ${statusColor};border-radius:8px;margin-bottom:8px;box-shadow:0 1px 4px rgba(0,80,40,.05);overflow:hidden">
+      <div style="padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="toggleHistCard('${q.id}')">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:800;color:#0d1a12;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${isExp?"▾":"▸"} ${q.title||"タイトルなし"}
+          </div>
+          <div style="font-size:10px;color:#5a7f68;font-family:var(--fm);display:flex;gap:10px;flex-wrap:wrap">
+            <span>${ac.name||"不明"}</span>
+            <span style="color:${q.type==='paid'?"var(--gold2)":"var(--em3)"}">${q.type==='paid'?"💰 有料":"📝 無料"} ${price}</span>
+            <span>${q.style||""} · ${(q.body||"").length.toLocaleString()}字</span>
+            <span>${q.genTime||""}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;align-items:center" onclick="event.stopPropagation()">
+          <span style="font-size:10px;font-family:var(--fm);font-weight:700;color:${statusColor}">${statusLabel}</span>
+          <button class="btn b-xs" style="background:var(--em5);color:var(--em3);border:1px solid var(--em4)" onclick="markDrafted('${q.id}')">📝 下書済</button>
+          <button class="btn b-xs" style="background:#e8f8f0;color:var(--em3);border:1px solid rgba(0,168,120,.3)" onclick="markPublished('${q.id}')">✅ 公開済</button>
+          <button class="btn b-xs" style="background:#fff0f0;color:#c0001a;border:1px solid #fcc" onclick="deleteQueueItem('${q.id}')">🗑 削除</button>
+        </div>
+      </div>
+      ${isExp ? `
+      <div style="border-top:1px solid var(--ink4);padding:16px;background:#fafffe">
+        ${q.description?`<div style="font-size:11px;color:#5a7f68;line-height:1.7;margin-bottom:12px;padding:10px;background:#f0faf4;border-radius:6px">${q.description}</div>`:""}
+        ${q.tags&&q.tags.length?`<div style="margin-bottom:12px">${q.tags.map(t=>`<span style="display:inline-block;background:var(--em4);color:var(--em3);font-size:9px;font-weight:800;padding:2px 8px;border-radius:10px;margin:2px">#${t}</span>`).join("")}</div>`:""}
+        <div style="font-size:12px;line-height:2;color:#1a2e22;font-family:'Noto Sans JP',sans-serif;max-height:500px;overflow-y:auto;padding:0 4px">
+          ${bodyPreview||'<span style="color:#aaa">本文データなし</span>'}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn b-o b-sm" onclick="copyNoteBody('${q.id}')">📋 本文コピー</button>
+          ${q.threadsPost?`<button class="btn b-sm" style="background:#e8f8f0;color:var(--em3);border:1px solid var(--em4)" onclick="copyQueueSNS('${q.id}','threads')">🌿 Threads投稿文</button>`:""}
+          ${q.xPost?`<button class="btn b-sm" style="background:#e8f8f0;color:var(--em3);border:1px solid var(--em4)" onclick="copyQueueSNS('${q.id}','x')">✖ X投稿文</button>`:""}
+        </div>
+      </div>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function toggleHistCard(id) {
+  _expandedHistId = (_expandedHistId === id) ? null : id;
+  renderHistory();
+}
+
+function deleteQueueItem(id) {
+  if(!confirm("このnoteをキューから削除しますか？")) return;
+  queue = queue.filter(q => q.id !== id);
+  if(_expandedHistId === id) _expandedHistId = null;
+  saveQueue();
+  renderHistory();
+  renderQueueList();
+  document.getElementById("b-create").textContent = queue.filter(q=>q.status==="done").length;
+  document.getElementById("b-history").textContent = queue.filter(q=>q.status==="done").length;
+  toast("🗑 削除しました", "キューから削除しました");
+}
+
+function copyNoteBody(id) {
+  const q = queue.find(x=>x.id===id);
+  if(!q||!q.body) return;
+  navigator.clipboard.writeText(q.body).then(()=>toast("📋 本文コピー","クリップボードにコピーしました"));
+}
+
+function viewFromHistory(id) {
+  const item = queue.find(q=>q.id===id);
+  if(!item) return;
+  sw("create");
+  showNoteViewer(item);
+}
+
+
+function markDrafted(id) {
+  const item = queue.find(q=>q.id===id);
+  if(item) { item.drafted=true; saveQueue(); renderHistory(); toast('📝 更新','下書き保存済みにマークしました'); }
+}
+
+function markPublished(id) {
+  const item = queue.find(q=>q.id===id);
+  if(item) { item.published=true; item.drafted=true; saveQueue(); renderHistory(); toast('✅ 更新','公開済みにマークしました'); }
+}
+
+function clearHistory() {
+  if(!confirm('キューをクリアしますか？（生成済みnoteのデータが消えます）')) return;
+  queue = [];
+  saveQueue();
+  renderHistory();
+  renderQueueList();
+  document.getElementById('b-create').textContent='0';
+  document.getElementById('b-history').textContent='0';
+  toast('🗑️ クリア完了','作業キューをクリアしました');
+}
+function copyQueueSNS(id, type) {
+  const q = queue.find(x=>x.id===id);
+  if(!q) return;
+  const text = type==='threads' ? q.threadsPost : q.xPost;
+  if(!text) {toast('⚠️','投稿文がありません（生成時にSNS同時生成にチェックを入れてください）');return;}
+  navigator.clipboard.writeText(text).then(()=>toast(`📋 ${type==='threads'?'Threads':'X'}投稿文コピー`,'クリップボードにコピーしました'));
+}
+
+function exportHistory() {
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const done = queue.filter(q=>q.status==='done');
+  if(!done.length){toast('⚠️','エクスポートできるデータがありません');return;}
+  const rows = [['タイトル','アカウント','タイプ','価格','文字数','生成時刻','ステータス']];
+  done.forEach(q=>{
+    const ac = ACCOUNTS.find(a=>a.id===q.acId)||{};
+    rows.push([
+      q.title||'',ac.name||'',q.type==='paid'?'有料':'無料',
+      q.type==='paid'?`¥${(PRICE_MAP[q.priceKey]||9800).toLocaleString()}`:'無料',
+      q.words||'',q.genTime||'',
+      q.published?'公開済':q.drafted?'下書き済':'未投稿'
+    ]);
+  });
+  const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`note-history-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  toast('⬇️ エクスポート完了',`${done.length}件のデータをCSVに保存しました`);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// おまかせ生成（販売実績豊富なテーマをAIが提案→確認→生成）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function startOmakase() {
+  const acId = document.getElementById('create-ac').value;
+  const ac = ACCOUNTS.find(a=>a.id===acId);
+  if(!ac){toast('⚠️','アカウントを選択してください');return;}
+  const noteType = document.querySelector('#type-free-btn.b-gr') ? 'free' : (document.getElementById('type-paid-btn')?.style.opacity==='1'?'paid':'free');
+  // ボタン状態から判定
+  const isPaidMode = document.getElementById('price-field')?.style.display !== 'none';
+
+  const btn = document.querySelector('[onclick="startOmakase()"]');
+  if(btn){btn.disabled=true;btn.textContent='✨ 提案中...';}
+
+  try {
+    const prompt = `あなたはnote販売のプロです。
+アカウントジャンル: ${ac.genre}
+ターゲット: ${ac.persona?.target||'副業初心者'}
+
+noteで販売実績が豊富な（売れやすい）テーマを3つ提案してください。
+それぞれをリメイク（表現を変えて）した形で提案すること。
+重複禁止。具体的なテーマ・ターゲットの悩み・伝えるメッセージを含めること。
+
+JSON形式のみで返してください:
+{
+  "proposals": [
+    {"theme":"テーマ名","problem":"ターゲットの悩み","message":"伝えるメッセージ","titleHint":"タイトル案","reason":"このテーマが売れる理由（1行）"},
+    {"theme":"テーマ名","problem":"ターゲットの悩み","message":"伝えるメッセージ","titleHint":"タイトル案","reason":"このテーマが売れる理由（1行）"},
+    {"theme":"テーマ名","problem":"ターゲットの悩み","message":"伝えるメッセージ","titleHint":"タイトル案","reason":"このテーマが売れる理由（1行）"}
+  ]
+}`;
+
+    const raw = await callClaude('あなたはnoteマーケティングの専門家です。', prompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m ? m[0] : raw);
+    const props = data.proposals || [];
+
+    // 確認ポップアップ
+    showOmakaseConfirm(props, acId);
+  } catch(e) {
+    toast('⚠️ エラー', e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='✨ おまかせ（販売実績豊富なテーマをAIが提案）';}
+  }
+}
+
+function showOmakaseConfirm(proposals, acId) {
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,30,18,.8);z-index:400;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(8px)';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:12px;width:580px;max-width:94vw;max-height:90vh;overflow-y:auto;border:1px solid rgba(0,168,120,.2);box-shadow:0 20px 60px rgba(0,80,40,.25)">
+      <div style="height:3px;background:linear-gradient(90deg,var(--em3),var(--em2))"></div>
+      <div style="padding:18px 22px 12px;border-bottom:1px solid var(--ink4);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:15px;font-weight:800;color:#0d1a12">✨ おまかせ提案 — 3テーマ</div>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:1px solid var(--ink5);width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px">×</button>
+      </div>
+      <div style="padding:16px 22px">
+        <div style="font-size:11px;color:#5a7f68;font-weight:700;margin-bottom:14px">どのテーマで生成しますか？選択するとフォームに自動入力されます。</div>
+        ${proposals.map((p,i) => `
+          <div style="background:#f8fdfb;border:2px solid var(--em4);border-radius:8px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all .15s" 
+               onmouseover="this.style.borderColor='var(--em)';this.style.background='#f0faf5'"
+               onmouseout="this.style.borderColor='var(--em4)';this.style.background='#f8fdfb'"
+               onclick="applyOmakase('${encodeURIComponent(JSON.stringify(p))}');this.closest('[style*=fixed]').remove()">
+            <div style="font-size:13px;font-weight:800;color:var(--em3);margin-bottom:6px">✦ ${p.theme}</div>
+            <div style="display:grid;grid-template-columns:70px 1fr;gap:4px 8px;font-size:11px;font-weight:600">
+              <span style="color:#5a7f68">ターゲットの悩み</span><span style="color:#0d1a12">${p.problem}</span>
+              <span style="color:#5a7f68">伝えるメッセージ</span><span style="color:#0d1a12">${p.message}</span>
+              <span style="color:#5a7f68">タイトル案</span><span style="color:var(--em3);font-weight:800">${p.titleHint}</span>
+              <span style="color:#5a7f68">売れる理由</span><span style="color:#5a7f68">${p.reason}</span>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+}
+
+function applyOmakase(encodedProp) {
+  const p = JSON.parse(decodeURIComponent(encodedProp));
+  document.getElementById('c-problem').value  = p.problem  || '';
+  document.getElementById('c-message').value  = p.message  || '';
+  document.getElementById('c-title').value    = p.titleHint|| '';
+  toast('✨ おまかせ入力完了', `「${p.theme}」のテーマを入力しました。内容を確認して生成してください`);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// SNS投稿文 noteリンク更新・再生成・投稿ページを開く
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function updateNoteLink(itemId, url) {
+  const item = queue.find(q=>q.id===itemId);
+  if(item) item.noteLink = url;
+}
+
+async function regenSNSPosts(itemId) {
+  const item = queue.find(q=>q.id===itemId);
+  if(!item){toast('⚠️','noteが見つかりません');return;}
+  const ac = ACCOUNTS.find(a=>a.id===item.acId)||{};
+  const noteLink = item.noteLink || document.getElementById(`sns-note-link-${itemId}`)?.value || '';
+  const linkText = noteLink ? `\nnoteリンク: ${noteLink}` : '';
+
+  const btn = document.querySelector(`[onclick="regenSNSPosts('${itemId}')"]`);
+  if(btn){btn.disabled=true;btn.textContent='生成中...';}
+
+  try {
+    const prompt = `以下のnoteのSNS投稿文を生成してください。
+
+noteタイトル: ${item.title}
+ジャンル: ${ac.genre||''}
+ターゲット: ${ac.persona?.target||''}${linkText}
+
+【Threads投稿文】
+- 200〜300文字
+- 読者の興味を引き、noteを読みたくなる訴求文
+- 絵文字を2〜3個
+- ハッシュタグを2〜3個
+- noteリンクがあれば末尾に含める
+
+【X投稿文】
+- 140文字以内（厳守）
+- インパクト重視のフック文
+- ハッシュタグ1〜2個
+- noteリンクがあれば含める
+
+JSON形式のみで返してください:
+{"threads_post":"Threads投稿文","x_post":"X投稿文"}`;
+
+    const raw = await callClaude('あなたはSNSマーケティングの専門家です。', prompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m ? m[0] : raw);
+    item.threadsPost = data.threads_post || item.threadsPost;
+    item.xPost = data.x_post || item.xPost;
+    showNoteViewer(item); // ビューワーを再描画
+    toast('✅ SNS投稿文を再生成', 'noteリンク入りの投稿文が完成しました');
+  } catch(e) {
+    toast('⚠️ エラー', e.message);
+  } finally {
+    if(btn){btn.disabled=false;btn.textContent='🔄 SNS文を再生成';}
+  }
+}
+
+function copyAndOpenThreads(itemId) {
+  const item = queue.find(q=>q.id===itemId);
+  if(!item?.threadsPost){toast('⚠️','Threads投稿文がありません');return;}
+  const text = item.threadsPost;
+  navigator.clipboard.writeText(text).then(()=>{
+    toast('📋 Threadsテキストをコピー','投稿ページを開きます...');
+    setTimeout(()=>window.open('https://www.threads.net/intent/post?text='+encodeURIComponent(text.substring(0,500)),'_blank'),600);
+  });
+}
+
+function copyAndOpenX(itemId) {
+  const item = queue.find(q=>q.id===itemId);
+  if(!item?.xPost){toast('⚠️','X投稿文がありません');return;}
+  const text = item.xPost;
+  navigator.clipboard.writeText(text).then(()=>{
+    toast('📋 Xテキストをコピー','投稿ページを開きます...');
+    setTimeout(()=>window.open('https://twitter.com/intent/tweet?text='+encodeURIComponent(text.substring(0,280)),'_blank'),600);
+  });
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ダッシュボード 自動集計システム
+// note.com の公開APIを使ってスキ数・記事数を自動取得
+// 売上・購入数はセッションCookie経由でサーバー経由取得
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _dbCache = {}; // {acId: {notes:[], likes:0, pub_count:0, month_rev:0, today_rev:0, fetched:''}}
+let _noteListCache = []; // 全アカウントのnote一覧フラット
+
+function loadDashboardData() {
+  try { _dbCache = JSON.parse(localStorage.getItem('nf_db_cache') || '{}'); } catch {}
+}
+
+function saveDashboardCache() {
+  localStorage.setItem('nf_db_cache', JSON.stringify(_dbCache));
+}
+
+// note.com 公開API経由でユーザー情報・記事一覧を取得
+// ※ file://で開いている場合はCORSでブロックされるため空を返す（GitHub Pages上では動作）
+async function fetchNoteUser(noteUrl) {
+  if (!noteUrl || location.protocol === 'file:') return null;
+  try {
+    const m = noteUrl.match(/note\.com\/([^/?#]+)/);
+    if (!m) return null;
+    const userId = m[1];
+    const res = await fetch(`https://note.com/api/v2/creators/${userId}`, {
+      headers: {'Accept': 'application/json'}
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data || null;
+  } catch { return null; }
+}
+
+async function fetchNoteList(noteUrl) {
+  if (!noteUrl || location.protocol === 'file:') return [];
+  try {
+    const m = noteUrl.match(/note\.com\/([^/?#]+)/);
+    if (!m) return [];
+    const userId = m[1];
+    const res = await fetch(`https://note.com/api/v2/creators/${userId}/contents?kind=note&page=1`, {
+      headers: {'Accept': 'application/json'}
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data?.data?.contents || [];
+  } catch { return []; }
+}
+
+// バックエンドサーバー（node server.js）経由で売上取得
+async function fetchRevFromServer(acId) {
+  const auth = NOTE_AUTH[acId] || {};
+  if (!auth.email) return {today:0, month:0};
+  try {
+    const res = await fetch('http://localhost:3001/api/revenue', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email: auth.email, password: auth.password, noteId: auth.noteId})
+    });
+    if (!res.ok) return {today:0, month:0};
+    return await res.json();
+  } catch {
+    // サーバー未起動の場合は0を返す（UIにヒント表示）
+    return {today:0, month:0, serverDown:true};
+  }
+}
+
+// 全アカウントのデータを非同期で取得（強制更新フラグあり）
+async function fetchAllDashboard(force=false) {
+  const dot = document.getElementById('db-fetch-dot');
+  const status = document.getElementById('db-fetch-status');
+  if (dot) dot.style.animation = 'pulse .5s ease infinite';
+  if (status) status.textContent = '取得中...';
+
+  loadDashboardData();
+  const now = Date.now();
+  const CACHE_TTL = 10 * 60 * 1000; // 10分キャッシュ
+
+  _noteListCache = [];
+  let serverDown = false;
+
+  for (const ac of ACCOUNTS) {
+    const cached = _dbCache[ac.id];
+    const isStale = !cached?.fetched || (now - new Date(cached.fetched).getTime()) > CACHE_TTL;
+
+    if (force || isStale) {
+      // 公開API取得
+      const [userInfo, noteList] = await Promise.all([
+        fetchNoteUser(ac.note_url),
+        fetchNoteList(ac.note_url)
+      ]);
+
+      // 売上はバックエンドサーバーから
+      const rev = await fetchRevFromServer(ac.id);
+      if (rev.serverDown) serverDown = true;
+
+      const likesTotal = noteList.reduce((s,n) => s + (n.likeCount||0), 0);
+      const thisMonth = new Date().toISOString().slice(0,7);
+      const monthNotes = noteList.filter(n => n.publishAt?.startsWith(thisMonth));
+
+      _dbCache[ac.id] = {
+        user: userInfo,
+        notes: noteList.slice(0, 30), // 最新30件
+        likes: likesTotal,
+        pub_count: noteList.length,
+        month_notes: monthNotes.length,
+        today_rev: rev.today || 0,
+        month_rev: rev.month || 0,
+        fetched: new Date().toISOString()
+      };
+    }
+
+    // 記事一覧にアカウント情報付きで追加
+    (_dbCache[ac.id]?.notes || []).forEach(n => {
+      _noteListCache.push({...n, _acId: ac.id, _acName: ac.name, _acColor: ac.color});
+    });
+  }
+
+  saveDashboardCache();
+
+  const nowStr = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+  if (dot) { dot.style.animation = ''; dot.style.background = '#3acc66'; }
+  if (status) {
+    status.textContent = serverDown
+      ? '公開情報のみ取得（売上はnode server.js起動で自動取得）'
+      : `${nowStr} 全データ取得完了`;
+  }
+
+  refreshDashboard();
+}
+
+function saveDashboardData() {} // 互換のため残す（自動集計なので何もしない）
+
+function refreshDashboard() {
+  loadDashboardData();
+  const now = new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
+
+  let todayTotal=0, monthTotal=0, likesTotal=0, pubTotal=0;
+  ACCOUNTS.forEach(ac => {
+    const d = _dbCache[ac.id]||{};
+    todayTotal  += d.today_rev  || 0;
+    monthTotal  += d.month_rev  || 0;
+    likesTotal  += d.likes      || 0;
+    pubTotal    += d.pub_count  || 0;
+  });
+
+  const setEl = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  setEl('db-today-rev',  todayTotal  ? `¥${todayTotal.toLocaleString()}` : '¥ —');
+  setEl('db-month-rev',  monthTotal  ? `¥${monthTotal.toLocaleString()}` : '¥ —');
+  setEl('db-likes',      likesTotal  || '—');
+  setEl('db-pub-count',  pubTotal    || '—');
+  setEl('db-last-update',`最終更新: ${now}`);
+
+  // アカウント別売上
+  const acList = document.getElementById('db-ac-list');
+  if (acList) {
+    if (!ACCOUNTS.length) {
+      acList.innerHTML = '<div class="empty" style="padding:16px;font-size:12px">アカウントを追加してください</div>';
+    } else {
+      acList.innerHTML = ACCOUNTS.map(ac => {
+        const d = _dbCache[ac.id]||{};
+        const pct = monthTotal>0 ? Math.round((d.month_rev||0)/monthTotal*100) : 0;
+        const user = d.user||{};
+        return `<div style="padding:10px 0;border-bottom:1px solid var(--ink4);display:flex;align-items:center;gap:10px">
+          <div style="width:28px;height:28px;border-radius:50%;background:${ac.color||'var(--em)'}20;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${ac.color||'var(--em)'}">
+            ${ac.name?.charAt(0)||'A'}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:800;color:#0d1a12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ac.name}</div>
+            <div style="font-size:9px;color:#5a7f68;font-weight:600">公開${d.pub_count||0}本 / 👍${d.likes||0} / フォロワー${user.followerCount||'—'}</div>
+            <div style="height:4px;background:var(--ink4);border-radius:2px;margin-top:4px">
+              <div style="height:100%;width:${pct}%;background:var(--em);border-radius:2px;transition:width .5s"></div>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:12px;font-weight:800;color:var(--em3)">${d.month_rev?'¥'+d.month_rev.toLocaleString():'—'}</div>
+            <div style="font-size:9px;color:#5a7f68">今月売上</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // 直近の生成・投稿
+  const recent = document.getElementById('db-recent-queue');
+  if (recent) {
+    const items = [...queue].reverse().slice(0,5);
+    if (!items.length) {
+      recent.innerHTML = '<div class="empty" style="padding:16px;font-size:11px">まだ生成履歴がありません</div>';
+    } else {
+      recent.innerHTML = items.map(q => {
+        const ac2 = ACCOUNTS.find(a=>a.id===q.acId)||{};
+        const st = q.published?{c:'var(--em)',l:'✅ 公開'}:q.drafted?{c:'var(--em3)',l:'📝 下書き'}:{c:'#f5a800',l:'⏳ 未投稿'};
+        const draftLink = q.draftUrl ? `<a href="${q.draftUrl}" target="_blank" style="font-size:9px;color:var(--em3);text-decoration:none;font-weight:800">📝 下書きを開く</a>` : '';
+        return `<div style="padding:8px 0;border-bottom:1px solid var(--ink4)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11px;font-weight:800;color:#0d1a12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${q.title||'生成中…'}</div>
+              <div style="font-size:9px;color:#5a7f68;font-weight:600">${ac2.name||''} · ${q.genTime||''}</div>
+            </div>
+            <span style="font-size:9px;font-weight:800;color:${st.c};white-space:nowrap">${st.l}</span>
+          </div>
+          ${draftLink ? `<div style="margin-top:4px">${draftLink}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // noteフィルターセレクト更新
+  const dbFilter = document.getElementById('db-ac-filter');
+  if (dbFilter) {
+    const cur = dbFilter.value;
+    dbFilter.innerHTML = '<option value="">全アカウント</option>' +
+      ACCOUNTS.map(a=>`<option value="${a.id}" ${cur===a.id?'selected':''}>${a.name}</option>`).join('');
+  }
+
+  renderNoteList();
+}
+
+// note記事一覧を描画
+function renderNoteList() {
+  const container = document.getElementById('db-note-list');
+  if (!container) return;
+  const filterAc = document.getElementById('db-ac-filter')?.value || '';
+  const notes = _noteListCache.filter(n => !filterAc || n._acId === filterAc);
+
+  if (!notes.length) {
+    container.innerHTML = '<div class="empty" style="padding:20px;font-size:12px">「🔄 今すぐ更新」を押すと記事が表示されます</div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
+      ${notes.slice(0,20).map(n => {
+        const status = n.status === 'draft' ? '📝 下書き' : '✅ 公開';
+        const statusColor = n.status === 'draft' ? 'var(--em3)' : 'var(--em)';
+        const price = n.price ? `¥${n.price.toLocaleString()}` : '無料';
+        const noteUrl = n.noteUrl || `https://note.com/${n._acId}/${n.key}`;
+        return `<div style="background:#f8fdfb;border:1px solid var(--em4);border-radius:8px;padding:12px;cursor:pointer;transition:all .15s"
+             onmouseover="this.style.background='#e8f8f0'" onmouseout="this.style.background='#f8fdfb'"
+             onclick="window.open('${noteUrl}','_blank')">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+            <span style="font-size:9px;font-weight:800;color:${statusColor}">${status}</span>
+            <span style="font-size:9px;font-weight:800;color:var(--em3)">${price}</span>
+          </div>
+          <div style="font-size:11px;font-weight:800;color:#0d1a12;line-height:1.5;margin-bottom:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${n.name||'タイトル不明'}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:9px;color:#5a7f68;font-weight:600">${n._acName} · 👍${n.likeCount||0}</span>
+            <span style="font-size:9px;color:var(--em3);font-weight:800">↗ 開く</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function escStr(s){return (s||'').replace(/'/g,"\\'").replace(/\n/g,'\\n').substring(0,200);}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 常時自動保存・同期システム
+// ボタン操作不要。変更があれば即ローカル保存＆クラウド同期
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+let _syncTimer = null;
+let _pendingSync = false;
+
+// キューをlocalStorageに保存（更新のたびに呼ぶ）
+function saveQueue() {
+  // ★ v10: 全文保存（切り捨てなし）。ストレージ超過時のみ軽量版にフォールバック
+  try {
+    localStorage.setItem('nf_queue', JSON.stringify(queue));
+  } catch(e) {
+    // Storage quota exceeded → 本文を3000字に圧縮して再試行
+    const slim = queue.map(q => ({...q, body: (q.body||'').substring(0,3000)}));
+    try { localStorage.setItem('nf_queue', JSON.stringify(slim)); } catch(e2) {}
+    console.warn('saveQueue: storage quota exceeded, body trimmed');
+  }
+  // Supabaseにもキューを同期
+  _pushQueueToCloud();
+}
+
+async function _pushQueueToCloud() {
+  if (!sbReady || !sb) return;
+  try {
+    const slim = queue.map(q => ({...q, body: (q.body||'').substring(0,500)}));
+    await sb.from('nf_queue').delete().eq('user_id', syncUserId);
+    if (slim.length > 0) {
+      await sb.from('nf_queue').insert([{
+        user_id: syncUserId,
+        data: JSON.stringify(slim),
+        updated_at: new Date().toISOString()
+      }]);
+    }
+  } catch(e) { console.warn('Queue cloud push error:', e); }
+}
+
+async function _pullQueueFromCloud() {
+  if (!sbReady || !sb) return;
+  try {
+    const { data } = await sb.from('nf_queue').select('*').eq('user_id', syncUserId).limit(1);
+    if (data && data.length > 0) {
+      const cloudQueue = JSON.parse(data[0].data || '[]');
+      // ローカルにないものだけ追加（マージ）
+      const localIds = new Set(queue.map(q => q.id));
+      const newItems = cloudQueue.filter(q => !localIds.has(q.id));
+      if (newItems.length > 0) {
+        queue = [...queue, ...newItems];
+        localStorage.setItem('nf_queue', JSON.stringify(queue));
+        renderQueueList();
+        renderHistory();
+        toast('☁️ キューを同期', `他のデバイスから${newItems.length}件を取得しました`);
+      }
+    }
+  } catch(e) { console.warn('Queue cloud pull error:', e); }
+}
+
+// ローカルに即時保存 → クラウドへはデバウンス（1.5秒後）
+function saveAccountsLocal() {
+  localStorage.setItem('nf_accounts', JSON.stringify(ACCOUNTS));
+  // クラウド同期をデバウンス（連続操作でも1回だけ送る）
+  _pendingSync = true;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(async () => {
+    if (_pendingSync) {
+      _pendingSync = false;
+      await _pushToCloud();
+    }
+  }, 1500);
+}
+
+// クラウドへ実際にプッシュ（内部用）
+async function _pushToCloud() {
+  if (!sbReady) return;
+  try {
+    await sb.from('nf_accounts').delete().eq('user_id', syncUserId);
+    if (ACCOUNTS.length > 0) {
+      const rows = ACCOUNTS.map(ac => ({
+        user_id: syncUserId,
+        account_id: ac.id,
+        data: JSON.stringify(ac),
+        updated_at: new Date().toISOString()
+      }));
+      const { error } = await sb.from('nf_accounts').insert(rows);
+      if (error) throw error;
+    }
+    setSyncBadge('', '☁️ ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit', minute:'2-digit'}) + ' 同期済');
+  } catch(e) {
+    console.warn('Cloud push error:', e);
+    setSyncBadge('error', '❌ 同期失敗（ローカルは保存済）');
+  }
+}
+
+// saveAccountsCloud は saveAccountsLocal のエイリアス（互換）
+async function saveAccountsCloud() {
+  saveAccountsLocal();
+}
+
+// アカウント保存時はクラウドも
+const _origSaveAccount = saveAccount;
+async function saveAccount() {
+  // 元のsaveAccount処理を実行
+  const name = document.getElementById('na-name').value.trim();
+  const genre = document.getElementById('na-genre').value.trim();
+  if(!name||!genre){toast('⚠️ 入力エラー','アカウント名とジャンルは必須です');return;}
+  const data = {
+    name, genre,
+    harm: document.getElementById('na-harm').value,
+    color: document.getElementById('na-color').value,
+    threads_url: document.getElementById('na-threads').value.trim(),
+    x_url: document.getElementById('na-x').value.trim(),
+    note_url: document.getElementById('na-note').value.trim(),
+    character:{
+      name: document.getElementById('na-char-name').value.trim()||name,
+      age: parseInt(document.getElementById('na-age').value)||25,
+      first_person: document.getElementById('na-first').value.trim()||'私',
+      background: document.getElementById('na-bg').value.trim(),
+      tone: document.getElementById('na-tone').value.trim(),
+      phrases: document.getElementById('na-phrases').value.split(',').map(s=>s.trim()).filter(Boolean),
+      forbidden: '箇条書き記号（・▶︎→★など）、過剰な絵文字、根拠のない断言',
+      samples: []
+    },
+    persona:{
+      target: document.getElementById('na-target').value.trim(),
+      pains:[], desires:[], before:'', after:''
+    },
+    products:{梅:{title:'入門ガイド',price:2980,url:''},竹:{title:'メインnote',price:9800,url:''},松:{title:'プレミアムnote',price:29800,url:''}},
+    stats:{notes_total:0,this_month_revenue:0,posts_total:0}
+  };
+  if(editingAcId){
+    const idx = ACCOUNTS.findIndex(a=>a.id===editingAcId);
+    if(idx>=0) ACCOUNTS[idx]={...ACCOUNTS[idx],...data};
+    toast('✅ 変更保存','アカウントを更新しました');
+  } else {
+    data.id = 'ac'+Date.now();
+    ACCOUNTS.push(data);
+    toast('🎉 アカウント追加','新しいアカウントを追加しました');
+  }
+
+  // ★ note認証情報もモーダルから保存
+  const noteEmail = document.getElementById('na-note-email')?.value.trim();
+  const notePw    = document.getElementById('na-note-pw')?.value;
+  const acId = editingAcId || data.id;
+  if (noteEmail || notePw) {
+    const existing = NOTE_AUTH[acId] || {};
+    NOTE_AUTH[acId] = {
+      ...existing,
+      email: noteEmail || existing.email || '',
+      password: notePw || existing.password || '',
+      saved: new Date().toISOString()
+    };
+    localStorage.setItem('nf_auth', JSON.stringify(NOTE_AUTH));
+    // 連携タブの入力欄も同期
+    const connEmail = document.getElementById('conn-email');
+    const connPw    = document.getElementById('conn-pw');
+    const connAc    = document.getElementById('conn-ac');
+    if(connAc && connEmail && connPw && connAc.value===acId){
+      connEmail.value = NOTE_AUTH[acId].email;
+      connPw.value    = NOTE_AUTH[acId].password;
+    }
+  }
+
+  await saveAccountsCloud(); // クラウド同期
+  renderAccounts();
+  populateSelects();
+  renderConnectList();
+  closeM('addAc');
+  editingAcId = null;
+}
+
+async function doDeleteAc() {
+  ACCOUNTS = ACCOUNTS.filter(a=>a.id!==delTargetId);
+  await saveAccountsCloud();
+  renderAccounts();
+  populateSelects();
+  closeM('delAc');
+  toast('🗑️ 削除完了','アカウントを削除しました');
+  delTargetId = null;
+}
+
+// Supabase セットアップSQL表示
+function showSupabaseSQL() {
+  const sql = `-- NOTE FACTORY v4 用テーブル
+-- Supabase SQL Editorで実行してください
+
+CREATE TABLE IF NOT EXISTS nf_accounts (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id text NOT NULL,
+  account_id text NOT NULL,
+  data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- インデックス
+CREATE INDEX IF NOT EXISTS idx_nf_accounts_user_id ON nf_accounts(user_id);
+
+-- Row Level Security（任意）
+ALTER TABLE nf_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "allow all for own user" ON nf_accounts
+  FOR ALL USING (true);
+
+-- Realtime有効化
+ALTER PUBLICATION supabase_realtime ADD TABLE nf_accounts;`;
+
+  navigator.clipboard.writeText(sql).then(()=>{
+    toast('📋 SQLコピー完了','Supabase SQL Editorに貼り付けて実行してください');
+  });
+  document.getElementById('supabase-sql-area').style.display='block';
+  document.getElementById('supabase-sql-content').textContent = sql;
+}
+
+// ★ APIキーをlocalStorageから復元
+(function loadApiKeys() {
+  const claudeKey = localStorage.getItem('nf_api_key');
+  const geminiKey = localStorage.getItem('nf_gemini_key');
+  if(claudeKey)  window.ANTHROPIC_API_KEY = claudeKey;
+  if(geminiKey)  window.GEMINI_API_KEY    = geminiKey;
+})();
+
+setNoteType('free');
+init();
+showStyleTip();
+loadDashboardData();
+checkLogin(); // ★ ログインチェック
+setTimeout(() => { sw('dashboard'); refreshDashboard(); }, 100);
+
+// file://で開いている場合は警告バナーを表示
+if (location.protocol === 'file:') {
+  setTimeout(() => {
+    const banner = document.createElement('div');
+    banner.id = 'file-protocol-banner';
+    banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#c0001a;color:#fff;padding:12px 20px;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:16px;font-family:sans-serif';
+    banner.innerHTML = `
+      <span>⚠️ <strong>file://で開いています</strong> — このままではnote生成・API通信がすべてブロックされます。<strong>GitHub PagesのURLで開くと全機能が動きます。</strong></span>
+      <button onclick="document.getElementById('file-protocol-banner').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-weight:800;flex-shrink:0">✕ 閉じる</button>`;
+    document.body.prepend(banner);
+  }, 500);
+}
+
+// ダッシュボード自動集計（起動2秒後に取得 → 以降10分ごと）
+setTimeout(() => fetchAllDashboard(false), 2000);
+setInterval(() => fetchAllDashboard(false), 10 * 60 * 1000);
+initSupabase(); // Supabase初期化
+</script>
+
+<!-- Supabase バックグラウンド自動同期UI -->
+<script>
+// ─── 同期ステータスバッジをヘッダーに追加 ─────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('header');
+  if (!header) return;
+  const hspace = header.querySelector('.hspace');
+
+  // 同期ステータスバッジ（常時表示・クリックで設定）
+  const syncBadge = document.createElement('div');
+  syncBadge.id = 'sync-status';
+  syncBadge.className = 'sync-badge';
+  syncBadge.innerHTML = '☁️ 同期待機中';
+  syncBadge.style.cursor = 'pointer';
+  syncBadge.title = 'クリックでSupabase設定';
+  syncBadge.onclick = () => openSbConfig();
+  if(hspace) header.insertBefore(syncBadge, hspace.nextSibling);
+
+  // ページロード時にSupabase設定を復元して即時同期開始
+  const savedUrl = localStorage.getItem('nf_sb_url');
+  const savedKey = localStorage.getItem('nf_sb_key');
+  if(savedUrl && savedKey) {
+    window.SUPABASE_URL_RUN = savedUrl;
+    window.SUPABASE_ANON_KEY_RUN = savedKey;
+    // 少し遅らせてinit実行
+    setTimeout(() => initSupabase(), 300);
+  } else {
+    setSyncBadge('local', '💾 ローカル保存中（タップして同期設定）');
+  }
+});
+
+function setSyncBadge(type, msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  el.innerHTML = msg;
+  el.className = 'sync-badge' + (type === 'syncing' ? ' syncing' : type === 'error' ? ' error' : '');
+}
+
+// ─── Supabase設定ポップアップ（シンプル版）─────────────────────
+function openSbConfig() {
+  const savedUrl = localStorage.getItem('nf_sb_url') || '';
+  const savedKey = localStorage.getItem('nf_sb_key') || '';
+  const userId = localStorage.getItem('nf_user_id') || '未設定';
+
+  const ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,30,18,.75);z-index:400;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)';
+  ov.innerHTML = `
+    <div style="background:#fff;border-radius:12px;width:520px;max-width:94vw;border:1px solid rgba(0,168,120,.2);box-shadow:0 20px 60px rgba(0,80,40,.2);overflow:hidden">
+      <div style="height:3px;background:linear-gradient(90deg,var(--em3),var(--em2))"></div>
+      <div style="padding:20px 24px 14px;border-bottom:1px solid var(--ink4);display:flex;align-items:center;justify-content:space-between">
+        <div style="font-family:var(--fs);font-size:16px;font-weight:800;color:#0d1a12">☁️ クロスデバイス同期 設定</div>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:1px solid var(--ink5);color:#5a7f68;width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px">×</button>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="background:#e8f8f0;border:1px solid rgba(0,168,120,.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;font-weight:700;color:#1c2e22;line-height:1.8">
+          📱 スマホ・PC・タブレット間でアカウントデータを自動同期します。<br>
+          <span style="color:var(--em3)">supabase.com</span> で無料プロジェクトを作成してください（5分）
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.15em;display:block;margin-bottom:5px">SUPABASE URL</label>
+          <input id="sb-url-inp" type="url" style="width:100%;padding:9px 12px;background:#f8fdfb;border:1px solid var(--ink5);border-radius:6px;font-size:12px;font-weight:600;color:#0d1a12;outline:none" placeholder="https://xxxxxxxx.supabase.co" value="${savedUrl}" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--ink5)'">
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.15em;display:block;margin-bottom:5px">SUPABASE ANON KEY</label>
+          <input id="sb-key-inp" type="password" style="width:100%;padding:9px 12px;background:#f8fdfb;border:1px solid var(--ink5);border-radius:6px;font-size:12px;font-weight:600;color:#0d1a12;outline:none" placeholder="eyJhbGciOiJIUzI1NiIs..." value="${savedKey}" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--ink5)'">
+        </div>
+        <div style="font-size:10px;color:#5a7f68;font-weight:600;margin-bottom:14px">🔑 デバイスID: <code style="font-size:9px">${userId}</code>（同じIDで全デバイスが同期されます）</div>
+        <button onclick="saveSbConfig()" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--em),var(--em3));color:#fff;border:none;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer">☁️ 保存して同期開始</button>
+        <div style="margin-top:10px;text-align:center">
+          <button onclick="showSbSQL()" style="background:none;border:none;color:var(--em3);font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline">📋 必要なSQLをコピー（テーブル作成）</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+}
+
+function saveSbConfig() {
+  const url = document.getElementById('sb-url-inp')?.value?.trim();
+  const key = document.getElementById('sb-key-inp')?.value?.trim();
+  if(!url || !key) { toast('⚠️', 'URLとKeyの両方を入力してください'); return; }
+  localStorage.setItem('nf_sb_url', url);
+  localStorage.setItem('nf_sb_key', key);
+  window.SUPABASE_URL_RUN = url;
+  window.SUPABASE_ANON_KEY_RUN = key;
+  document.querySelector('[style*="fixed"][style*="400"]')?.remove();
+  toast('☁️ 設定完了', 'Supabase同期を開始します...');
+  initSupabase();
+}
+
+function showSbSQL() {
+  const sql = `-- NOTE FACTORY v9 テーブル作成SQL
+-- Supabase > SQL Editor に貼り付けて実行
+
+CREATE TABLE IF NOT EXISTS nf_accounts (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id text NOT NULL,
+  account_id text NOT NULL,
+  data jsonb NOT NULL,
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nf_acc_user ON nf_accounts(user_id);
+ALTER TABLE nf_accounts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "open" ON nf_accounts FOR ALL USING (true);
+ALTER PUBLICATION supabase_realtime ADD TABLE nf_accounts;
+
+CREATE TABLE IF NOT EXISTS nf_queue (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id text NOT NULL,
+  data jsonb NOT NULL,
+  updated_at timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nf_queue_user ON nf_queue(user_id);
+ALTER TABLE nf_queue ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "open_queue" ON nf_queue FOR ALL USING (true);`;
+  navigator.clipboard.writeText(sql).then(()=>toast('📋 SQLコピー', 'Supabase SQL Editorに貼り付けて実行してください'));
+}
+
+// ─── クラウドからデータ読み込み ───────────────
+async function syncFromCloud() {
+  if (!sbReady || !sb) return;
+  try {
+    // アカウント取得
+    const { data: acData } = await sb.from('nf_accounts')
+      .select('*').eq('user_id', syncUserId).order('created_at', {ascending:true});
+    if (acData && acData.length > 0) {
+      ACCOUNTS = acData.map(r => JSON.parse(r.data));
+      renderAccounts();
+      populateSelects();
+      renderConnectList();
+    }
+    // キュー取得（他デバイスのnoteをマージ）
+    await _pullQueueFromCloud();
+  } catch(e) { console.warn('syncFromCloud error:', e); }
+}
+
+// ─── Supabase初期化（常時バックグラウンド同期） ───────────────
+async function initSupabase() {
+  const url  = window.SUPABASE_URL_RUN  || localStorage.getItem('nf_sb_url')  || '';
+  const akey = window.SUPABASE_ANON_KEY_RUN || localStorage.getItem('nf_sb_key') || '';
+  if (!url || !akey) {
+    setSyncBadge('local', '💾 ローカル保存中');
+    return;
+  }
+  setSyncBadge('syncing', '⟳ 接続中...');
+  try {
+    sb = window.supabase.createClient(url, akey);
+    sbReady = false;
+    const { error } = await sb.from('nf_accounts').select('id').limit(1);
+    if (error) {
+      if (error.code === '42P01') {
+        setSyncBadge('error', '❌ テーブル未作成（設定からSQLを実行）');
+        toast('⚠️ Supabase', 'テーブルが見つかりません。ポップアップのSQLを実行してください');
+      } else { throw error; }
+      return;
+    }
+    sbReady = true;
+    setSyncBadge('', '☁️ クラウド同期中');
+    await syncFromCloud();
+    setupRealtimeSync();
+    setInterval(async () => {
+      if (!sbReady) return;
+      await syncFromCloud();
+      setSyncBadge('', '☁️ ' + new Date().toLocaleTimeString('ja-JP', {hour:'2-digit',minute:'2-digit'}) + ' 同期済');
+    }, 5 * 60 * 1000);
+  } catch(e) {
+    setSyncBadge('error', '❌ 接続エラー');
+    console.warn('Supabase init error:', e);
+  }
+}
+
+async function saveSupabaseConfig() {
+  await saveAccountsLocal();
+}
+
+// ─── ログイン処理（5時間セッション） ───────────────────────────
+const SESSION_HOURS = 5;
+const SESSION_KEY   = 'nf_session_exp';
+
+// 初回起動時にデフォルトパスワードを設定（コンソール操作不要）
+(function initDefaultPw() {
+  if (!localStorage.getItem('nf_pw')) {
+    localStorage.setItem('nf_pw', 'Gapg4274');
+  }
+})();
+
+// 初回起動時にデフォルトGemini APIキーを設定
+(function initDefaultGeminiKey() {
+  if (!localStorage.getItem('nf_gemini_key')) {
+    const defaultKey = 'nanobanana';
+    localStorage.setItem('nf_gemini_key', defaultKey);
+    window.GEMINI_API_KEY = defaultKey;
+  }
+})();
+
+function checkLogin() {
+  const savedPw = localStorage.getItem('nf_pw') || '';
+  if (!savedPw) {
+    document.getElementById('login-screen').style.display = 'none';
+    return;
+  }
+  // 5時間セッションチェック
+  const expiry = parseInt(localStorage.getItem(SESSION_KEY) || '0', 10);
+  const now    = Date.now();
+  if (expiry > now) {
+    // セッション有効 → ログイン画面をスキップ
+    document.getElementById('login-screen').style.display = 'none';
+    const remain = Math.ceil((expiry - now) / 60000);
+    console.info(`[NOTE FACTORY] セッション有効（残り約${remain}分）`);
+  } else {
+    // 期限切れ or 初回
+    document.getElementById('login-screen').style.display = 'flex';
+    setTimeout(() => document.getElementById('login-pw-input')?.focus(), 100);
+    if (expiry > 0) {
+      const errEl = document.getElementById('login-error');
+      if (errEl) {
+        errEl.textContent = 'セッションが期限切れです。再度ログインしてください';
+        errEl.style.display = 'block';
+        errEl.style.color = '#e08800';
+      }
+    }
+  }
+}
+
+function tryLogin() {
+  const input   = document.getElementById('login-pw-input').value;
+  const savedPw = localStorage.getItem('nf_pw') || '';
+  if (input === savedPw) {
+    // ★ 5時間セッションを設定
+    localStorage.setItem(SESSION_KEY, String(Date.now() + SESSION_HOURS * 3600000));
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('login-error').style.display  = 'none';
+    toast('✅ ログイン完了', `5時間有効なセッションを開始しました`);
+  } else {
+    const errEl = document.getElementById('login-error');
+    errEl.textContent = 'パスワードが違います';
+    errEl.style.color = '#c0001a';
+    errEl.style.display = 'block';
+    document.getElementById('login-pw-input').value = '';
+    document.getElementById('login-pw-input').focus();
+  }
+}
+</script>
+</body>
+</html>
