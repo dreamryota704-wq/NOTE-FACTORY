@@ -3891,14 +3891,6 @@ const SESSION_KEY   = 'nf_session_exp';
   }
 })();
 
-// 初回起動時にデフォルトGemini APIキーを設定
-(function initDefaultGeminiKey() {
-  if (!localStorage.getItem('nf_gemini_key')) {
-    const defaultKey = 'nanobanana';
-    localStorage.setItem('nf_gemini_key', defaultKey);
-    window.GEMINI_API_KEY = defaultKey;
-  }
-})();
 
 function checkLogin() {
   const savedPw = localStorage.getItem('nf_pw') || '';
