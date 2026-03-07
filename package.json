@@ -1,0 +1,18 @@
+{
+  "name": "note-factory-backend",
+  "version": "10.0.0",
+  "description": "NOTE FACTORY バックエンドサーバー - Puppeteer で note.com 下書き自動保存",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "npx nodemon src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "puppeteer": "^21.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

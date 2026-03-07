@@ -657,6 +657,26 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
       </div>
     </div>
     <div>
+      <!-- サーバー起動案内 -->
+      <div style="background:rgba(0,168,120,.06);border:1px solid rgba(0,168,120,.25);padding:13px 15px;border-radius:6px;margin-bottom:14px;font-size:11px;line-height:1.9;color:#1c2e22">
+        <div style="font-weight:900;font-size:10px;letter-spacing:.15em;color:var(--em3);margin-bottom:6px">🖥️ バックエンドサーバーの起動方法</div>
+        <div style="margin-bottom:4px">下書き保存には <strong>ローカルサーバー</strong> が必要です。</div>
+        <div style="font-family:var(--fm);background:#0d1a12;color:#7affb2;padding:8px 12px;border-radius:4px;font-size:10px;margin:6px 0;line-height:2">
+          <div># リポジトリをクローン（初回のみ）</div>
+          <div>git clone https://github.com/dreamryota704-wq/NOTE-FACTORY.git</div>
+          <div>cd NOTE-FACTORY</div>
+          <div>&nbsp;</div>
+          <div># 依存関係インストール（初回のみ）</div>
+          <div>npm install</div>
+          <div>&nbsp;</div>
+          <div># サーバー起動</div>
+          <div>node src/server.js</div>
+        </div>
+        <div style="color:#5a7f68;font-size:10px">起動後は <code style="background:var(--em5);padding:1px 5px;border-radius:2px">http://localhost:3001</code> で待機。ブラウザは開いたままにしてください。</div>
+        <div id="server-status-bar" style="margin-top:8px"></div>
+        <button class="btn b-o b-xs" style="margin-top:6px;width:100%" onclick="checkServerHealth()">🔄 サーバー接続確認</button>
+      </div>
+
       <div class="sec">下書き保存 実行</div>
       <div class="card" style="margin-bottom:14px">
         <div class="card-body">
@@ -2131,6 +2151,24 @@ async function saveNoteAuth() {
     // サーバー未起動の場合
     renderConnectionStatus(acId, null, 'サーバー未起動（認証情報は保存済み）');
     toast('💾 保存完了','認証情報を保存しました。サーバー起動後に自動的に接続されます');
+  }
+}
+
+// サーバー接続確認
+async function checkServerHealth() {
+  const bar = document.getElementById('server-status-bar');
+  if (bar) bar.innerHTML = '<span style="color:var(--gold2);font-size:10px">🔄 確認中...</span>';
+  try {
+    const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(4000) });
+    if (r.ok) {
+      const d = await r.json();
+      if (bar) bar.innerHTML = '<span style="color:#3acc66;font-size:10px;font-weight:800">✅ サーバー接続中 — 下書き保存が使えます</span>';
+      toast('✅ サーバー接続中', `localhost:3001 稼働中 (v${d.version})`);
+    } else {
+      throw new Error('HTTP ' + r.status);
+    }
+  } catch(e) {
+    if (bar) bar.innerHTML = '<span style="color:var(--red2);font-size:10px;font-weight:800">❌ サーバー未起動 — node src/server.js を実行してください</span>';
   }
 }
 
