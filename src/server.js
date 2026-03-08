@@ -80,32 +80,116 @@ function sleep(ms) {
 }
 
 // ─────────────────────────────────────────────
-// note.com ログイン
+// note.com ログイン（複数セレクター対応・2ステップ対応）
 // ─────────────────────────────────────────────
 async function loginToNote(page, email, password) {
   console.log(`  ログイン中: ${email}`);
-  await page.goto('https://note.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+  await page.goto('https://note.com/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await sleep(3000); // JS描画を待つ
 
-  // メールアドレス入力
-  await page.waitForSelector('input[type="email"]', { timeout: 10000 });
-  await page.click('input[type="email"]', { clickCount: 3 });
-  await page.type('input[type="email"]', email, { delay: 40 });
+  // デバッグ: ページ内のinputを全てログ出力
+  const inputs = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('input')).map(i => ({
+      type: i.type, name: i.name, id: i.id,
+      placeholder: i.placeholder, className: i.className.substring(0, 60)
+    }))
+  );
+  console.log('  ページ内input一覧:', JSON.stringify(inputs));
 
-  // パスワード入力
-  await page.click('input[type="password"]', { clickCount: 3 });
-  await page.type('input[type="password"]', password, { delay: 40 });
+  // メールアドレス inputを探す（複数パターン）
+  const emailSelectors = [
+    'input[type="email"]',
+    'input[name="email"]',
+    'input[id*="email"]',
+    'input[autocomplete="email"]',
+    'input[placeholder*="メール"]',
+    'input[placeholder*="mail"]',
+    'input[placeholder*="Mail"]',
+  ];
+
+  let emailInput = null;
+  for (const sel of emailSelectors) {
+    try {
+      emailInput = await page.$(sel);
+      if (emailInput) { console.log('  メール欄:', sel); break; }
+    } catch {}
+  }
+
+  // 見つからない場合はtype=text のinputを全て試す
+  if (!emailInput) {
+    const allInputs = await page.$$('input[type="text"], input:not([type])');
+    if (allInputs.length > 0) {
+      emailInput = allInputs[0];
+      console.log('  メール欄: フォールバック (最初のinput)');
+    }
+  }
+
+  if (!emailInput) {
+    // スクリーンショットを保存してデバッグ
+    await page.screenshot({ path: '/tmp/note_login_debug.png' });
+    throw new Error('メール入力欄が見つかりません。/tmp/note_login_debug.png を確認してください');
+  }
+
+  await emailInput.click({ clickCount: 3 });
+  await emailInput.type(email, { delay: 50 });
+  await sleep(500);
+
+  // パスワード input
+  const pwSelectors = [
+    'input[type="password"]',
+    'input[name="password"]',
+    'input[id*="password"]',
+    'input[placeholder*="パスワード"]',
+  ];
+  let pwInput = null;
+  for (const sel of pwSelectors) {
+    try {
+      pwInput = await page.$(sel);
+      if (pwInput) { console.log('  PW欄:', sel); break; }
+    } catch {}
+  }
+
+  // note.com は2ステップログイン（email入力→次へ→password）の場合あり
+  if (!pwInput) {
+    console.log('  パスワード欄なし → 2ステップログインを試みます');
+    // 「次へ」ボタンを押す
+    const nextClicked = await clickButtonByText(page, '次へ') ||
+                        await clickButtonByText(page, 'ログイン') ||
+                        await tryClick(page, ['button[type="submit"]']);
+    if (nextClicked) {
+      await sleep(2500);
+      for (const sel of pwSelectors) {
+        try {
+          pwInput = await page.$(sel);
+          if (pwInput) { console.log('  PW欄 (2ステップ):', sel); break; }
+        } catch {}
+      }
+    }
+  }
+
+  if (!pwInput) {
+    await page.screenshot({ path: '/tmp/note_pw_debug.png' });
+    throw new Error('パスワード入力欄が見つかりません。/tmp/note_pw_debug.png を確認してください');
+  }
+
+  await pwInput.click({ clickCount: 3 });
+  await pwInput.type(password, { delay: 50 });
+  await sleep(500);
 
   // ログインボタン押下
   await Promise.all([
-    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }).catch(() => {}),
     page.keyboard.press('Enter'),
   ]);
+  await sleep(2000);
 
   const url = page.url();
+  console.log('  ログイン後URL:', url);
   if (url.includes('/login') || url.includes('/error')) {
-    throw new Error('ログイン失敗: メールアドレスまたはパスワードが違います');
+    await page.screenshot({ path: '/tmp/note_loginfail_debug.png' });
+    throw new Error('ログイン失敗: メールアドレスまたはパスワードを確認してください');
   }
-  console.log('  ✅ ログイン成功:', url);
+  console.log('  ✅ ログイン成功');
   return true;
 }
 
