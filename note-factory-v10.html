@@ -1553,6 +1553,22 @@ function buildThumbPrompt(basePrompt, ac, item) {
   return `${basePrompt}, ${style}, 16:9 aspect ratio, high quality editorial, ultra detailed, no text overlay, visually striking`;
 }
 
+// 画像だけ再生成（ビューアーから呼べる）
+async function regenThumbs(itemId) {
+  const item = queue.find(q=>q.id===itemId);
+  if(!item){ toast('⚠️','対象noteが見つかりません'); return; }
+  toast('🖼️ 画像再生成中...','Gemini Imagen4で生成しています');
+  await genThumbs(item);
+  saveQueue();
+  renderHistory();
+  // ビューアーが開いていたら更新
+  const viewer = document.getElementById('note-viewer');
+  if(viewer && viewer.style.display!=='none'){
+    viewNote(itemId);
+  }
+  toast('✅ 画像生成完了','⬇️ DLボタンでダウンロードできます');
+}
+
 async function genThumbs(item) {
   const key = window.GEMINI_API_KEY || localStorage.getItem('nf_gemini_key') || '';
   const ac = ACCOUNTS.find(a=>a.id===item.acId)||{};
@@ -1677,20 +1693,36 @@ function showNoteViewer(item) {
     </div>`:''}
 
     ${item.thumbs?.length?`
-    <div style="padding:14px 22px;border-top:1px solid var(--ink4)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div class="sec" style="margin-bottom:0">サムネイル（${item.thumbs.length}枚）</div>
-        ${item.thumbs.some(t=>t.isDemo)?`<button class="btn b-o b-xs" onclick="openApiSettings()" style="font-size:9px">⚙️ Gemini APIキーを設定して実画像生成</button>`:'<span style="font-size:9px;color:var(--em3);font-family:var(--fm)">✅ Imagen4で生成済</span>'}
+    <div style="padding:18px 22px;border-top:1px solid var(--ink4)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="sec" style="margin-bottom:0">🖼️ 生成画像（サムネ＋導入画像）</div>
+        ${item.thumbs.some(t=>t.isDemo)
+          ? `<button class="btn b-o b-xs" onclick="openApiSettings()" style="font-size:9px">⚙️ Gemini APIキーを設定して実画像生成</button>`
+          : `<button class="btn b-o b-xs" onclick="regenThumbs('${item.id}')">↺ 画像再生成</button>`}
       </div>
-      <div class="thumb-grid">
-        ${item.thumbs.map(t=>`
-          <div class="thumb-card">
-            <div class="thumb-img" style="background:${t.color||'var(--ink4)'}">
-              ${t.src?`<img src="${t.src}" alt="${t.label}">`:`<span style="font-size:22px;opacity:.4">🖼️</span>`}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+        ${item.thumbs.map((t,i)=>`
+          <div style="background:#fff;border:1px solid var(--ink4);border-radius:8px;overflow:hidden;box-shadow:0 1px 6px rgba(0,80,40,.07)">
+            <div style="position:relative;aspect-ratio:16/9;background:${t.color||'var(--ink4)'};overflow:hidden;display:flex;align-items:center;justify-content:center">
+              ${t.src
+                ? `<img src="${t.src}" alt="${t.label}" style="width:100%;height:100%;object-fit:cover">`
+                : `<div style="text-align:center;opacity:.5"><div style="font-size:32px">🖼️</div><div style="font-size:9px;margin-top:4px;font-family:var(--fm)">Gemini APIキーを設定して生成</div></div>`}
+              <div style="position:absolute;top:7px;left:7px;background:rgba(0,0,0,.6);color:#fff;font-size:8px;font-family:var(--fm);padding:2px 7px;border-radius:3px;font-weight:800">
+                ${i===0?'📌 サムネ（カバー）':i===1?'📖 導入画像':t.label}
+              </div>
             </div>
-            <div class="thumb-label">${t.label}</div>
+            <div style="padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+              <span style="font-size:10px;color:#5a7f68;font-weight:700">${i===0?'カバー画像（表紙）':i===1?'導入画像（記事冒頭）':t.label}</span>
+              ${t.src?`<a href="${t.src}" download="note_${i===0?'cover':i===1?'intro':t.label}_${Date.now()}.png" style="font-size:9px;font-weight:800;color:var(--em3);background:var(--em5);border:1px solid var(--em4);padding:3px 10px;border-radius:3px;text-decoration:none">⬇️ DL</a>`:''}
+            </div>
           </div>`).join('')}
       </div>
+      ${item.thumbs.some(t=>t.src)?`
+      <div style="margin-top:12px;padding:10px 14px;background:var(--em5);border:1px solid var(--em4);border-radius:6px;font-size:10px;color:var(--em3);line-height:1.8">
+        <strong>💡 使い方：</strong>
+        「⬇️ DL」で画像をダウンロード → note.comの記事作成画面で<br>
+        カバー画像ボタンに「カバー画像」を、本文の最初に「導入画像」を挿入してください。
+      </div>`:''}
     </div>`:''}
 
     <div style="padding:14px 22px;border-top:1px solid var(--ink4);display:flex;gap:8px;flex-wrap:wrap;align-items:center">
