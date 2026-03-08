@@ -28,6 +28,8 @@ app.use(express.json({ limit: '50mb' }));
 // ブラウザ管理
 // ─────────────────────────────────────────────
 let browser = null;
+// メールアドレスごとにログイン済みページを保持（セッション再利用）
+const sessionPages = {};
 
 // Mac/Windows の Chrome パスを探す
 function findChromePath() {
@@ -80,12 +82,51 @@ function sleep(ms) {
 }
 
 // ─────────────────────────────────────────────
+// セッション管理（ログイン済みページを再利用）
+// ─────────────────────────────────────────────
+async function getSessionPage(email, password) {
+  // 既存のセッションページが生きていればそのまま返す
+  if (sessionPages[email]) {
+    try {
+      const p = sessionPages[email];
+      // ページが有効か確認
+      await p.evaluate(() => true);
+      console.log('  ♻️  セッション再利用:', email);
+      return p;
+    } catch {
+      // ページが閉じていたらセッションをリセット
+      delete sessionPages[email];
+    }
+  }
+
+  // 新規ページを作成してログイン
+  const br = await launchBrowser();
+  const page = await br.newPage();
+  await page.setExtraHTTPHeaders({ 'Accept-Language': 'ja-JP,ja;q=0.9' });
+  await page.setUserAgent(
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  );
+  await loginToNote(page, email, password);
+
+  // セッションとして保存
+  sessionPages[email] = page;
+  return page;
+}
+
+// ─────────────────────────────────────────────
 // note.com ログイン（複数セレクター対応・2ステップ対応）
 // ─────────────────────────────────────────────
 async function loginToNote(page, email, password) {
   console.log(`  ログイン中: ${email}`);
   await page.goto('https://note.com/login', { waitUntil: 'domcontentloaded', timeout: 30000 });
   await sleep(3000); // JS描画を待つ
+
+  // ── すでにログイン済みの場合はスキップ ──
+  const currentUrl = page.url();
+  if (!currentUrl.includes('/login')) {
+    console.log('  ✅ すでにログイン済み:', currentUrl);
+    return true;
+  }
 
   // デバッグ: ページ内のinputを全てログ出力
   const inputs = await page.evaluate(() =>
@@ -297,18 +338,12 @@ app.post('/api/test-auth', async (req, res) => {
     return res.status(400).json({ error: '認証情報が不足しています' });
   }
 
-  let page;
   try {
-    const br = await launchBrowser();
-    page = await br.newPage();
-    await page.setExtraHTTPHeaders({ 'Accept-Language': 'ja-JP,ja;q=0.9' });
-    await loginToNote(page, email, password);
+    await getSessionPage(email, password);
     res.json({ ok: true, message: '接続完了' });
   } catch (e) {
     console.error('test-auth エラー:', e.message);
     res.status(401).json({ error: e.message });
-  } finally {
-    if (page) await page.close().catch(() => {});
   }
 });
 
@@ -324,19 +359,11 @@ app.post('/api/draft-save', async (req, res) => {
 
   console.log(`\n📝 下書き保存開始: 「${title.substring(0, 30)}」`);
 
-  let page;
   let tmpImagePath = null;
 
   try {
-    const br = await launchBrowser();
-    page = await br.newPage();
-    await page.setExtraHTTPHeaders({ 'Accept-Language': 'ja-JP,ja;q=0.9' });
-    await page.setUserAgent(
-      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-    );
-
-    // ── 1. ログイン ──────────────────────────────
-    await loginToNote(page, email, password);
+    // ── 1. セッション取得（ログイン済みなら再利用）──
+    const page = await getSessionPage(email, password);
 
     // ── 2. 新規note作成ページへ ───────────────────
     console.log('  新規作成ページへ移動...');
@@ -518,7 +545,7 @@ app.post('/api/draft-save', async (req, res) => {
     if (tmpImagePath && fs.existsSync(tmpImagePath)) {
       try { fs.unlinkSync(tmpImagePath); } catch {}
     }
-    if (page) await page.close().catch(() => {});
+    // ページはセッションとして保持するので閉じない
   }
 });
 
