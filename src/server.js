@@ -29,11 +29,34 @@ app.use(express.json({ limit: '50mb' }));
 // ─────────────────────────────────────────────
 let browser = null;
 
+// Mac/Windows の Chrome パスを探す
+function findChromePath() {
+  const candidates = [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return null; // Puppeteer 同梱の Chromium を使う
+}
+
 async function launchBrowser() {
   if (browser && browser.isConnected()) return browser;
   console.log('🚀 ブラウザ起動中...');
-  browser = await puppeteer.launch({
-    headless: 'new',
+
+  const chromePath = findChromePath();
+  if (chromePath) {
+    console.log('  Chrome 使用:', chromePath);
+  } else {
+    console.log('  Puppeteer 同梱 Chromium を使用');
+  }
+
+  const launchOptions = {
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -41,7 +64,10 @@ async function launchBrowser() {
       '--disable-blink-features=AutomationControlled',
     ],
     defaultViewport: { width: 1280, height: 900 },
-  });
+  };
+  if (chromePath) launchOptions.executablePath = chromePath;
+
+  browser = await puppeteer.launch(launchOptions);
   browser.on('disconnected', () => {
     console.log('ブラウザが切断されました');
     browser = null;
