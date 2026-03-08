@@ -1572,31 +1572,71 @@ async function regenThumbs(itemId) {
 async function genThumbs(item) {
   const key = window.GEMINI_API_KEY || localStorage.getItem('nf_gemini_key') || '';
   const ac = ACCOUNTS.find(a=>a.id===item.acId)||{};
-  item.thumbs = item.thumbPrompts.map((p,i)=>({prompt:p,label:['カバー','挿絵','まとめ','実績','CTA'][i]||`画像${i+1}`,isDemo:true,color:['#c0001a20','#1a3a8a20','#1a7a3a20','#8a601a20','#6a1a8a20'][i%5]}));
+  item.thumbs = item.thumbPrompts.map((p,i)=>({
+    prompt:p,
+    label:['カバー','導入','まとめ','実績','CTA'][i]||`画像${i+1}`,
+    isDemo:true,
+    color:['#c0001a20','#1a3a8a20','#1a7a3a20','#8a601a20','#6a1a8a20'][i%5]
+  }));
   if(!key) {
-    // APIキー未設定の場合：ビューアーにプロンプトだけ表示（設定ガイド付き）
+    toast('⚙️ Gemini APIキー未設定','⚙️ API設定ボタンからキーを入力してください');
     return;
   }
 
-  // 最大3枚（APIレート制限対策）
+  // 試すモデル（新しい順にフォールバック）
+  const IMAGEN_MODELS = [
+    'imagen-4.0-generate-001',
+    'imagen-4.0-generate-preview-06-05',
+    'imagen-3.0-generate-002',
+  ];
+
   const maxThumbs = Math.min(item.thumbPrompts.length, 3);
+  let workingModel = null;
 
   for(let i=0;i<maxThumbs;i++){
-    try{
-      const enhancedPrompt = buildThumbPrompt(item.thumbPrompts[i], ac, item);
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-preview-06-05:predict?key=${key}`,{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          instances:[{prompt: enhancedPrompt}],
-          parameters:{sampleCount:1,aspectRatio:'16:9',safetyFilterLevel:'block_some',personGeneration:'dont_allow'}
-        })
-      });
-      const d=await r.json();
-      const b64=d.predictions?.[0]?.bytesBase64Encoded;
-      if(b64){item.thumbs[i].src=`data:image/png;base64,${b64}`;item.thumbs[i].isDemo=false;}
-    }catch(e){console.warn('サムネ生成失敗',e);}
-    await sleep(1200);
+    const label = i===0?'サムネ（カバー）':i===1?'導入画像':'まとめ画像';
+    toast(`🖼️ 画像生成中 ${i+1}/${maxThumbs}`,`${label}をGemini Imagenで生成中...`);
+
+    const enhancedPrompt = buildThumbPrompt(item.thumbPrompts[i], ac, item);
+    let generated = false;
+
+    const modelsToTry = workingModel ? [workingModel] : IMAGEN_MODELS;
+    for(const model of modelsToTry){
+      try{
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${key}`,
+          {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({
+              instances:[{prompt: enhancedPrompt}],
+              parameters:{sampleCount:1,aspectRatio:'16:9',safetyFilterLevel:'block_some',personGeneration:'dont_allow'}
+            })
+          }
+        );
+        const d = await r.json();
+        console.log(`Gemini[${model}] status:${r.status}`, JSON.stringify(d).substring(0,300));
+
+        if(d.error){ console.warn(`モデル ${model} エラー:`, d.error.message); continue; }
+
+        const b64 = d.predictions?.[0]?.bytesBase64Encoded;
+        if(b64){
+          item.thumbs[i].src = `data:image/png;base64,${b64}`;
+          item.thumbs[i].isDemo = false;
+          workingModel = model;
+          generated = true;
+          console.log(`✅ 画像${i+1}枚目 (${model})`);
+          break;
+        }
+      }catch(e){ console.warn(`モデル ${model}:`, e.message); }
+    }
+
+    if(!generated){
+      toast('⚠️ 画像生成失敗',`${label}の生成に失敗。ブラウザのコンソール(F12)でエラー詳細を確認してください`);
+    }
+    if(i < maxThumbs-1) await sleep(1500);
   }
+  renderHistory();
 }
 
 // ══════════════════════════════════════════════
