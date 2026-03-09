@@ -523,6 +523,7 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
               <option value="reveal">💥 衝撃→解説型（フック重視）</option>
               <option value="dialog">💬 対話・Q&A型（共感重視）</option>
               <option value="sales">💰 セールスレター＋有料記事【完全版】</option>
+              <option value="ponyo">🔥 ぽにょ式コンテンツ販売【セールス10章＋有料本編0〜7章】</option>
             </select>
             <div id="style-tip-box" style="margin-top:8px"></div>
           </div>
@@ -1408,6 +1409,11 @@ async function generateSingleNote(item) {
     return await generateSalesNote(item, ac, wc);
   }
 
+  // ━━ ぽにょ式コンテンツ販売モード ━━
+  if (item.style === 'ponyo') {
+    return await generatePonyoNote(item, ac);
+  }
+
   const structures = {
     story:`はじめに（200字）→体験談の設定・感情で共感から始める\n第1章（600字）→当時の状況と問題の背景\n第2章（600字）→転機となった気づき・行動\n第3章（700字）→実際にやったこと（具体的手順）\n${isPaid?'第4章（700字）→詳細な方法と再現手順\n第5章（500字）→結果と証拠\n':''}おわりに（200字）→読者への行動促し${isPaid?'':`\n有料noteへの自然な誘導: ${prod.url}`}`,
     howto:`はじめに（200字）→この記事で得られること\n${isPaid?'準備（300字）→必要なものと前提条件\n':''}STEP 1〜${isPaid?6:3}（各${isPaid?600:450}字）→具体手順、各STEPに実体験1つ\nまとめ（200字）→復習と次のアクション`,
@@ -2043,7 +2049,7 @@ function resetDailyPlan() {
 
 function renderDailySlots() {
   const plan = getDailyPlan();
-  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス'};
+  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス',ponyo:'ぽにょ式'};
   const priceMap = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
 
   document.getElementById('daily-slots').innerHTML = plan.map((p,i) => `
@@ -2064,6 +2070,7 @@ function renderDailySlots() {
               <option value="reveal" ${p.style==='reveal'?'selected':''}>衝撃解説型</option>
               <option value="dialog" ${p.style==='dialog'?'selected':''}>Q&A型</option>
               <option value="sales" ${p.style==='sales'?'selected':''}>セールスレター</option>
+              <option value="ponyo" ${p.style==='ponyo'?'selected':''}>🔥 ぽにょ式</option>
             </select>
             <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'words',this.value)">
               <option value="2000" ${p.words==='2000'?'selected':''}>2,000字</option>
@@ -2428,6 +2435,196 @@ function showStyleTip() {
 // ══════════════════════════════════════════════
 // CLAUDE API CALL
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// ぽにょ式コンテンツ販売ジェネレーター
+// ══════════════════════════════════════════════════════════════
+async function generatePonyoNote(item, ac) {
+  const c  = ac.character || {};
+  const p  = ac.persona   || {};
+  const genre = ac.genre  || 'X/SNSマネタイズ';
+
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const price = PRICE_MAP[item.priceKey] || 9800;
+
+  const systemPrompt = `あなたは今から完全に「${c.name||'著者'}」（${c.age||'30'}歳）という人物になりきって、ぽにょ式コンテンツ販売の黄金フレームワークに従いnoteを書きます。
+
+プロフィール: ${c.background||''}
+一人称: ${c.first_person||'私'}
+文体: ${c.tone||'親しみやすく情熱的'}
+口癖（自然に散りばめる）: ${(c.phrases||[]).join('、')}
+絶対禁止: HTMLタグ、記号（・▶︎→★◆など）
+
+ターゲット読者: ${p.target||'副業・SNSマネタイズに興味がある20〜40代'}
+読者の悩み: ${(p.pains||[]).join('、')||'収入を増やしたい・SNSで稼ぎたいが方法が分からない'}
+ジャンル: ${genre}`;
+
+  const userPrompt = `以下の「ぽにょ式黄金構成」で有料note（¥${price.toLocaleString()}）を完全に書いてください。
+
+テーマ・ジャンル: ${genre}
+読者の悩み: ${item.problem||p.pains?.[0]||'SNSで稼ぎたいが何から始めればいいか分からない'}
+伝えたいメッセージ: ${item.message||p.desires?.[0]||'正しい方法で行動すれば誰でも稼げる'}
+${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルは①のフック公式で最適なものを考えてください'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+【無料公開エリア：セールスレター10ステップ】
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+① 強烈なフック（300字）
+   公式:「少ない〇〇で×××」/ 常識を否定する宣言
+   数字×結果×逆説を組み合わせる
+
+② 共感の罠（300字）
+   読者の3つの悩みをチェックマーク形式でリスト化
+   「これは自分のことだ」と思わせる具体的な言語化
+
+③ 常識破壊の宣言（200字）
+   「はっきり言います。〇〇しても一生△△できません」
+   多数派（NG）vs 少数派（正解）の二項対立で表現
+
+④ 著者ストーリー（600字）
+   どん底→転機→試行錯誤→現在の流れ
+   具体的な職業・手取り・感情的な転機を入れる
+   Before/After対比表を入れる（過去vs現在）
+
+⑤ 実績証明の言及（200字）
+   購入通知・実績スクショへの言及（「この記事内に掲載」）
+   具体的な数字（金額・件数・期間）
+
+⑥ 誤解の解消（300字）
+   「誤解①: 〇〇が大事 → 実際は△△」形式で2つ展開
+   競合との差別化ポジションを明確に
+
+⑦ 秘密のメカニズム開示（300字）
+   「なぜ雑魚アカウントでも売れるのか？」
+   2つの柱を提示、具体的な数字で裏付け
+
+⑧ コンテンツ内容の詳細公開（400字）
+   全章の一覧をチェックリスト形式で視覚化
+   各項目に「なぜ必要か」の一文、特典も強調
+
+⑨ 実績者の声・社会的証明（300字）
+   3パターン：著名人・初心者・複数ジャンル
+   最初の懸念→驚き→具体的な役立ちポイントの構成
+
+⑩ CTA（200字）
+   限定性か「今すぐ動く理由」を提示
+   価格提示 + 感謝メッセージで締める
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+【有料コンテンツ本編：0〜7章構成】
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+第0章：ロードマップ（500字）
+   「最初に絶対見て！」全体像・稼げない人のよくある勘違い
+   活用方法（1回目サラッと→2回目ワーク→3回目聞き流し）
+   特典の受け取り方
+
+第1章：土台設計（800字）
+   発信軸・コンセプト設計の3要素（Myオファー/ポジション/ペルソナ）
+   「実績とは別軸」の差別化を考える方法
+   「〇〇×△△」掛け合わせのユニーク性
+
+第2章：外見・見せ方設計（700字）
+   プロフィール・アイコン・ヘッダー設計
+   「選ばれる外見」の法則
+   NG例とOK例を並べて解説
+
+第3章：コア技術【ぽにょ式7タイプ教育ポスト】（1200字）
+   Type01 変化を見せるポスト（Before/After）
+   Type02 問題点を指摘するポスト（常識破壊）
+   Type03 推奨手段を伝えるポスト（悩み解決）
+   Type04 再現性を伝えるポスト（「自分にもできる」）
+   Type05 共感を得るポスト（ファン化）
+   Type06 行動の重要性を説くポスト
+   Type07 自己投資の重要性を説くポスト
+   各タイプに実例テンプレートを1つずつ付ける
+
+第4章：マネタイズ（800字）
+   「これだけやればOK」の3パターンに絞る
+   販売導線の図解（文章で表現）
+   月収ステップアップの道筋（0→30万→100万）
+
+第5章：応用・裏ワザ（600字）
+   上級テクニック2〜3個
+   よくある失敗とその回避法
+
+第6章：集客・加速（600字）
+   集客を加速させる具体的な施策
+   アルゴリズムとの付き合い方
+
+第7章：ルーティン化（400字）
+   1日・1週間・1ヶ月の行動プランを提示
+   「続ける仕組み」の設計法
+   最後に読者へのメッセージ
+
+【特典5個の紹介】（本文内に組み込む）
+   特典①〜⑤を「5つの戦闘力ぶち上げ特典」として紹介
+   各特典に「これだけで元が取れる」という価値訴求
+
+【ワークシート7枚の紹介】（本文内に組み込む）
+   運用マニュアル／ジャンル決め／競合リサーチ／発信軸構築
+   教育ポスト作成（これだけでお買い得と強調）
+   運用ルーティン化／Myペルソナ作成
+
+【文字数ルール】
+全体で12000字以上。これは最低ライン。必ず超えること。
+セールスレター部分（無料エリア）と有料コンテンツ本編を明確に区切ること。
+区切りには「━━━ ここから有料コンテンツ ━━━」と入れる。
+
+JSON形式のみで返す（コードブロックなし）:
+{
+  "title": "ぽにょ式フック公式に沿ったタイトル",
+  "body": "note全文（セールスレター＋有料本編、改行は\\nで表現）",
+  "description": "概要文160字",
+  "tags": ["タグ1","タグ2","タグ3","タグ4","タグ5"],
+  "threads_post": "Threads投稿文（280字以内、絵文字・ハッシュタグ含む）",
+  "x_post": "X投稿文（140字以内）",
+  "thumbnail_prompts": [
+    "カバー画像プロンプト（英語・16:9・コンテンツ販売テーマ・プロフェッショナル）",
+    "導入画像プロンプト（英語・16:9・著者ストーリーをイメージした画像）",
+    "まとめ画像プロンプト（英語・16:9・成功・達成感・行動促進）"
+  ]
+}`;
+
+  item.status = 'running';
+  renderQueueList();
+
+  try {
+    toast('🔥 ぽにょ式生成開始', `「${genre}」ジャンルで12000字超の有料noteを生成中...`);
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m ? m[0] : raw);
+
+    item.title       = data.title       || 'タイトル未設定';
+    item.body        = data.body        || '';
+    item.description = data.description || '';
+    item.tags        = data.tags        || [];
+    item.threadsPost = data.threads_post || '';
+    item.xPost       = data.x_post      || '';
+    item.thumbPrompts = data.thumbnail_prompts || [];
+    item.status      = 'done';
+    item.genTime     = new Date().toLocaleTimeString('ja-JP');
+
+    GENERATED_TITLES.push(item.title);
+    localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+
+    await genThumbs(item);
+    updateDraftNoteSelect();
+    await autoSaveDraft(item);
+
+  } catch(e) {
+    item.status = 'error';
+    item.error  = e.message;
+    console.error('ぽにょ式生成エラー:', e);
+  }
+
+  saveQueue();
+  renderQueueList();
+  document.getElementById('b-create').textContent = queue.filter(q=>q.status==='done').length;
+  renderHistory();
+  if(item.status==='done' && queue.filter(q=>q.status==='done').length===1) showNoteViewer(item);
+}
+
 // ══════════════════════════════════════════════════════════════
 // セールスレター＋有料記事 完全版ジェネレーター
 // ══════════════════════════════════════════════════════════════
