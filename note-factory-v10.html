@@ -524,6 +524,7 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
               <option value="dialog">💬 対話・Q&A型（共感重視）</option>
               <option value="sales">💰 セールスレター＋有料記事【完全版】</option>
               <option value="ponyo">🔥 ぽにょ式コンテンツ販売【セールス10章＋有料本編0〜7章】</option>
+              <option value="nenegaki">💎 寝稼ぎ式Pro【Threads特化・心理設計・キラーフレーズ全込み】</option>
             </select>
             <div id="style-tip-box" style="margin-top:8px"></div>
           </div>
@@ -1414,6 +1415,11 @@ async function generateSingleNote(item) {
     return await generatePonyoNote(item, ac);
   }
 
+  // ━━ 寝稼ぎ式Pro（Threads特化・心理設計）モード ━━
+  if (item.style === 'nenegaki') {
+    return await generateNenegakiNote(item, ac);
+  }
+
   const structures = {
     story:`はじめに（200字）→体験談の設定・感情で共感から始める\n第1章（600字）→当時の状況と問題の背景\n第2章（600字）→転機となった気づき・行動\n第3章（700字）→実際にやったこと（具体的手順）\n${isPaid?'第4章（700字）→詳細な方法と再現手順\n第5章（500字）→結果と証拠\n':''}おわりに（200字）→読者への行動促し${isPaid?'':`\n有料noteへの自然な誘導: ${prod.url}`}`,
     howto:`はじめに（200字）→この記事で得られること\n${isPaid?'準備（300字）→必要なものと前提条件\n':''}STEP 1〜${isPaid?6:3}（各${isPaid?600:450}字）→具体手順、各STEPに実体験1つ\nまとめ（200字）→復習と次のアクション`,
@@ -2049,7 +2055,7 @@ function resetDailyPlan() {
 
 function renderDailySlots() {
   const plan = getDailyPlan();
-  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス',ponyo:'ぽにょ式'};
+  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス',ponyo:'ぽにょ式',nenegaki:'寝稼ぎ式Pro'};
   const priceMap = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
 
   document.getElementById('daily-slots').innerHTML = plan.map((p,i) => `
@@ -2071,6 +2077,7 @@ function renderDailySlots() {
               <option value="dialog" ${p.style==='dialog'?'selected':''}>Q&A型</option>
               <option value="sales" ${p.style==='sales'?'selected':''}>セールスレター</option>
               <option value="ponyo" ${p.style==='ponyo'?'selected':''}>🔥 ぽにょ式</option>
+              <option value="nenegaki" ${p.style==='nenegaki'?'selected':''}>💎 寝稼ぎ式Pro</option>
             </select>
             <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'words',this.value)">
               <option value="2000" ${p.words==='2000'?'selected':''}>2,000字</option>
@@ -2435,6 +2442,197 @@ function showStyleTip() {
 // ══════════════════════════════════════════════
 // CLAUDE API CALL
 // ══════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// 寝稼ぎ式Pro（Threads特化・心理設計）ジェネレーター
+// content-sales-architect-pro スキルを全面適用
+// ══════════════════════════════════════════════════════════════
+async function generateNenegakiNote(item, ac) {
+  const c = ac.character || {};
+  const p = ac.persona   || {};
+  const genre = ac.genre || 'Threads×コンテンツ販売';
+
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const price = PRICE_MAP[item.priceKey] || 9800;
+
+  const systemPrompt = `あなたは今から完全に「${c.name||'著者'}」（${c.age||'28'}歳）になりきり、寝稼ぎ式の心理設計フレームワークに従ってnoteを書きます。
+
+プロフィール: ${c.background||''}
+一人称: ${c.first_person||'私'}
+文体: ${c.tone||'口語・テンポが速く・感嘆符を効果的に使う'}
+口癖（自然に散りばめる）: ${(c.phrases||[]).join('、')}
+禁止: HTMLタグ、記号（・▶︎→★◆など）
+
+ターゲット読者: ${p.target||'Threadsで稼ぎたい初心者〜中級者'}
+読者の3点悩み（口語・感嘆符で表現すること）:
+ - ${(p.pains||[])[0]||genre+'で収益化できるん？初心者でも大丈夫？'}
+ - ${(p.pains||[])[1]||'副業で1円も稼いだことないし無理かも！'}
+ - ${(p.pains||[])[2]||'フォロワーいないと稼ぐの無理やろ！！！'}
+
+【最重要ルール】
+・「理解させる」より「できそう感」を優先する
+・読者の心の声をそのまま代弁する口語表現を使う
+・数字は必ず具体的に（「数万」ではなく「671,700円」「3日で」「初月で」）
+・キラーフレーズを文中に自然に散りばめる:
+  「〜しながら○万稼いだ」「フォロワー0からたった○日で」「真似するだけで」
+  「こう聞いたらバカみたいだけど、まじで誰でもできる」
+  「なぜ今まで稼げなかったのか。それは〜からだ」
+  「知ってるか知らないかだけなんですよね〜」「これが最適解です」`;
+
+  const userPrompt = `以下の「寝稼ぎ式Pro黄金構成」で有料note（¥${price.toLocaleString()}）を完全に書いてください。
+
+ジャンル: ${genre}
+読者の悩み: ${item.problem||p.pains?.[0]||'Threadsで稼ぎたいが何から始めればいいか分からない'}
+メッセージ: ${item.message||p.desires?.[0]||'挫折しにくい方法で誰でも再現できる'}
+${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルは「できそう感×数字×ギャップ」の公式で作ること（例：「寝ながら○万」「○日で○万」）'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+【無料公開エリア：セールスレター 7つの心理装置】
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+①【冒頭の3点悩み攻撃】（200字）
+読者の心の声を口語・感嘆符でそのまま代弁する
+「・[恐怖・不安]\n・[劣等感]\n・[思い込み]\n\nこんな悩みとは金輪際お別れです。」
+
+②【差別化軸の早期提示】（200字）
+「なぜ今まで結果が出なかったのか？それは[競合の弱点を他責で説明]からです。」
+自分の手法が「極限まで挫折しにくい」理由を一言で
+
+③【実績の多層構造】（500字）
+第1層: 自分の収益数字（具体的な金額・期間）
+第2層: 振込画面・購入通知への言及（疑念の先回り：「偽装を疑う方もいるかもしれないので〜」）
+第3層: 弟子・実績者の声（「SNS完全初心者の主婦が2週間で10万」など読者と同属性で）
+第4層: 第三者からの感謝・メンション
+第5層: ランキング・プラットフォーム実績
+→ 実績者の属性を必ず「読者と同じレベル」に揃える
+
+④【社会的証明の展示】（300字）
+数字を具体的に・期間を短く・属性を添える・量で圧倒
+「累計○名の実績者を輩出してきた知見をフル活用」
+
+⑤【購入してほしくない人の明示（逆説クローズ）】（200字）
+「ただし、こんな方には向いていません：\n・[NG属性A]\n・[NG属性B]」
+「逆に、こんな方なら結果が出やすいです：\n・[理想購入者A]\n・[理想購入者B]」
+→ 希少性・選別感による購買欲の増幅
+
+⑥【問題意識の植え付け】（200字）
+「このままだと[恐怖の未来]になってたと思うとゾッとします」
+[信頼獲得] → [問題意識の植え付け] → [問題意識の増幅] → [解決策提示]の流れ
+
+⑦【無料note 6ステップ】（1200字）
+STEP1 興味付け: 理想の未来を「できそう感」最優先で提示（「寝ながら」「放置してるだけで」）
+STEP2 共感: 自分のダメだった過去→感情モードで読ませる（「〜みたいな辛いことありますよね？でもこんな…あったら嬉しくないですか？」）
+STEP3 転機: ノウハウとの出会いストーリー → 欲求喚起の再実行
+STEP4 理想の未来詳細: 「手を伸ばせば届く」距離に理想を置く、具体的な生活変化を箇条書き
+STEP5 信頼獲得＋問題意識増幅: 理念共有→「なぜ今うまくいかないか」他責説明→「このままだとヤバい」危機感醸成
+STEP6 解決策＋CTA: 手法を3行以内で超シンプルに→自分に近い属性の成功例→アンカリング→「Aしてって言わなくてもAさせる」自然な有料note誘導
+
+━━━━━━━━━━━━━━━━━━━━━━━━
+【有料コンテンツ本編：準備編→実践編→補講】
+━━━━━━━━━━━━━━━━━━━━━━━━
+
+【準備編】ジャンル選び・コンセプト決定（600字）
+売上の公式: 「売上 = 商品単価と数 × セールス力（頻度×強さ） × 集客量」
+フォロワー数≠集客量の真実（信頼度の低い1000人 < 信頼度の高い100人）
+「〇〇×△△」掛け合わせでユニーク性を出す方法
+
+【実践編①】アカウントパワーの高め方（700字）
+Threadsアルゴリズム攻略3手法:
+・手法①同ジャンルフォロー（10〜20人）→ バズ投稿をリサーチシートに蓄積
+・手法②キーワード入れ（ターゲットジャンルワードを投稿に含める）
+・手法③顧客目線の投稿（「発信者目線」より「客目線の共感投稿」が先）
+バズ後の2日間がボーナスタイム → この間に商品コンテンツを流す戦略
+
+【実践編②③】欲求喚起投稿＋有益投稿＋CTA（900字）
+欲求喚起の3要素: ①憧れの理想実現 ②あなたから手に入る ③難易度が高くない
+投稿要素: 数字インパクト・難易度低さ演出・実績証拠・反論処理・再現性の強調
+投稿比率: 欲求喚起:有益 = 5:1
+CTAの黄金法則: 「Aしてって言わなくてもAさせる」
+→ 有益情報チラ見せ → 「全部は無料noteで話してる」と自然に誘導
+→ 「してほしいアクション = お客様の利益」の図式を作る
+
+【実践編④】無料noteの作り方（500字）
+6ステップ構成の詳細（セールスレターのSTEP1〜6を具体的な手順として）
+「理解」より「できそう感」を優先する文章術
+
+【実践編⑤】有料noteへの成約設計（500字）
+顧客の興味関心ステージ理論:
+投稿を見る→内容が気になる→アカウントが気になる→中の人が気になる→商品購入
+「属人化による差別化」= 唯一無二の競合排除戦略
+「あなただから買う」状態の作り方
+
+【実践編⑥】サポート設計（400字）
+LINEオープンチャット・公式LINE導入のタイミング（500フォロワー以上）
+平均30〜40%がライン登録する仕組み
+「売れている様子を出し続ける」→ 購入通知・売上報告・レビュー紹介の継続投稿
+バンドワゴン効果・損失回避の活用
+
+【補講・ワンポイントアドバイス10か条】（500字）
+1. 書いた投稿を音読して違和感を修正
+2. 小手先の学習より見込み客との対話を優先
+3. Xで売れているジャンルでThreadsにまだ少ないものを展開
+4. 01達成の3STEP（双方向投稿→企画実施→小さな島形成）
+5〜10. 残り6か条を具体的に展開
+
+【文字数ルール】
+全体で13000字以上。これは絶対最低ライン。必ず超えること。
+セールスレター（無料エリア）と有料コンテンツ本編を明確に区切ること。
+区切りには「━━━ ここから有料コンテンツ ━━━」と入れる。
+キラーフレーズを全体を通じて自然に散りばめること。
+
+JSON形式のみで返す（コードブロックなし）:
+{
+  "title": "できそう感×数字×ギャップの公式タイトル",
+  "body": "note全文（改行は\\nで表現）",
+  "description": "概要文160字（3点悩み攻撃スタイルで）",
+  "tags": ["タグ1","タグ2","タグ3","タグ4","タグ5"],
+  "threads_post": "Threads投稿文（280字・欲求喚起3要素を全部入れる・キラーフレーズ込み）",
+  "x_post": "X投稿文（140字以内・インパクト重視）",
+  "thumbnail_prompts": [
+    "カバー画像プロンプト（英語・16:9・成功・スマホ・SNS・プロフェッショナル）",
+    "導入画像プロンプト（英語・16:9・Before/After対比・変化・感情）",
+    "まとめ画像プロンプト（英語・16:9・行動促進・次のステップ）"
+  ]
+}`;
+
+  item.status = 'running';
+  renderQueueList();
+
+  try {
+    toast('💎 寝稼ぎ式Pro生成開始', `「${genre}」で13000字超の最高クオリティ有料noteを生成中...`);
+    const raw = await callClaude(systemPrompt, userPrompt);
+    const m = raw.match(/\{[\s\S]*\}/);
+    const data = JSON.parse(m ? m[0] : raw);
+
+    item.title        = data.title        || 'タイトル未設定';
+    item.body         = data.body         || '';
+    item.description  = data.description  || '';
+    item.tags         = data.tags         || [];
+    item.threadsPost  = data.threads_post || '';
+    item.xPost        = data.x_post       || '';
+    item.thumbPrompts = data.thumbnail_prompts || [];
+    item.status       = 'done';
+    item.genTime      = new Date().toLocaleTimeString('ja-JP');
+
+    GENERATED_TITLES.push(item.title);
+    localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+
+    await genThumbs(item);
+    updateDraftNoteSelect();
+    await autoSaveDraft(item);
+
+  } catch(e) {
+    item.status = 'error';
+    item.error  = e.message;
+    console.error('寝稼ぎ式Pro生成エラー:', e);
+  }
+
+  saveQueue();
+  renderQueueList();
+  document.getElementById('b-create').textContent = queue.filter(q=>q.status==='done').length;
+  renderHistory();
+  if(item.status==='done' && queue.filter(q=>q.status==='done').length===1) showNoteViewer(item);
+}
+
 // ══════════════════════════════════════════════════════════════
 // ぽにょ式コンテンツ販売ジェネレーター
 // ══════════════════════════════════════════════════════════════
