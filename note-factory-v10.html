@@ -673,7 +673,7 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
       <div style="font-size:9px;font-weight:900;color:var(--em3);letter-spacing:.2em;margin-bottom:8px">STEP 1 — note.comのメール・パスワードを入力</div>
       <div class="card" style="margin-bottom:14px;border:1.5px solid var(--em4)">
         <div class="card-body">
-          <div class="fg"><label class="fl">アカウントを選択</label><select class="fsl" id="conn-ac"></select></div>
+          <div class="fg"><label class="fl">アカウントを選択</label><select class="fsl" id="conn-ac" onchange="autoFillConnAuth(this.value)"></select></div>
           <div class="fg"><label class="fl">📧 note.com メールアドレス</label><input type="email" class="fi" id="conn-email" placeholder="example@mail.com" style="font-size:13px"></div>
           <div class="fg" style="margin-bottom:0"><label class="fl">🔑 note.com パスワード</label><input type="password" class="fi" id="conn-pw" placeholder="●●●●●●●●" style="font-size:13px"></div>
           <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:9px 12px;font-size:10px;color:rgba(180,150,0,.9);margin-top:10px;border-radius:4px">
@@ -1700,9 +1700,9 @@ async function genThumbs(item) {
 
   // 試すモデル（新しい順にフォールバック）
   const IMAGEN_MODELS = [
-    'imagen-4.0-generate-001',
-    'imagen-4.0-generate-preview-06-05',
     'imagen-3.0-generate-002',
+    'imagen-3.0-fast-generate-001',
+    'imagen-4.0-generate-001',
   ];
 
   const maxThumbs = Math.min(item.thumbPrompts.length, 3);
@@ -1725,7 +1725,7 @@ async function genThumbs(item) {
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
               instances:[{prompt: enhancedPrompt}],
-              parameters:{sampleCount:1,aspectRatio:'16:9',safetyFilterLevel:'block_some',personGeneration:'dont_allow'}
+              parameters:{sampleCount:1,aspectRatio:'16:9'}
             })
           }
         );
@@ -1885,6 +1885,7 @@ function showNoteViewer(item) {
       <button class="btn b-o b-sm" onclick="downloadNote()">⬇️ .txt保存</button>
       <button class="btn b-gr b-sm" onclick="sendToDraftAndGetUrl()">📝 下書き保存 + URL取得</button>
       <button class="btn b-o b-sm" onclick="regenCurrent()">↺ 再生成</button>
+      <button class="btn b-sm" style="background:#fff0f0;color:#c0001a;border:1px solid #fcc;margin-left:auto" onclick="deleteViewerNote('${item.id}')">🗑 この記事を削除</button>
       <div id="draft-url-display-${item.id}" style="display:${item.draftUrl?'flex':'none'};align-items:center;gap:6px;background:var(--em5);border:1px solid var(--em4);border-radius:6px;padding:6px 12px">
         <span style="font-size:10px;font-weight:800;color:var(--em3)">📝 下書きURL:</span>
         <a href="${item.draftUrl||'#'}" target="_blank" id="draft-url-link-${item.id}" style="font-size:10px;color:var(--em3);font-weight:800;text-decoration:underline;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.draftUrl||''}</a>
@@ -2307,6 +2308,23 @@ function renderConnectList() {
       </div>
     </div>`;
   }).join('');
+  // conn-ac セレクトの自動復元
+  const connAcSel = document.getElementById('conn-ac');
+  if (connAcSel && connAcSel.value) {
+    const savedAuth = NOTE_AUTH[connAcSel.value] || {};
+    const connEmail = document.getElementById('conn-email');
+    const connPw = document.getElementById('conn-pw');
+    if (connEmail && savedAuth.email) connEmail.value = savedAuth.email;
+    if (connPw && savedAuth.password) connPw.value = savedAuth.password;
+  }
+}
+
+function autoFillConnAuth(acId) {
+  const auth = NOTE_AUTH[acId] || {};
+  const emailEl = document.getElementById('conn-email');
+  const pwEl = document.getElementById('conn-pw');
+  if (emailEl) emailEl.value = auth.email || '';
+  if (pwEl) pwEl.value = auth.password || '';
 }
 
 async function saveNoteAuth() {
@@ -3498,7 +3516,9 @@ async function autoSaveDraft(item) {
 
   // 自動保存中の表示
   const queueEl = document.getElementById(`hc-${item.id}`);
-  toast('📝 自動下書き保存中...', `「${item.title?.substring(0,20)}」をnoteに送信中`);
+  const acName = ACCOUNTS.find(a=>a.id===item.acId)?.name || item.acId;
+  console.log(`下書き保存: アカウント=${acName} (${auth.email})`);
+  toast('📝 自動下書き保存中...', `「${item.title?.substring(0,20)}」→ ${acName} (${auth.email?.split('@')[0]})に送信中`);
 
   try {
     const res = await fetch('http://localhost:3001/api/draft-save', {
@@ -4005,6 +4025,22 @@ function deleteQueueItem(id) {
   toast("🗑 削除しました", "キューから削除しました");
 }
 
+function deleteViewerNote(id) {
+  if(!confirm('この記事をキューから削除しますか？')) return;
+  queue = queue.filter(q => q.id !== id);
+  if(_expandedHistId === id) _expandedHistId = null;
+  saveQueue();
+  renderHistory();
+  renderQueueList();
+  document.getElementById('b-create').textContent = queue.filter(q=>q.status==='done').length;
+  document.getElementById('b-history').textContent = queue.filter(q=>q.status==='done').length;
+  // ビューアーを閉じる
+  const viewerArea = document.getElementById('viewer-area');
+  if(viewerArea) viewerArea.style.display = 'none';
+  currentNote = null;
+  toast('🗑 削除しました', 'キューから削除しました');
+}
+
 function copyNoteBody(id) {
   const q = queue.find(x=>x.id===id);
   if(!q||!q.body) return;
@@ -4493,13 +4529,25 @@ let _pendingSync = false;
 
 // キューをlocalStorageに保存（更新のたびに呼ぶ）
 function saveQueue() {
-  // ★ v10: 全文保存（切り捨てなし）。ストレージ超過時のみ軽量版にフォールバック
+  // ★ v10: 全文保存。ストレージ超過時は段階的に圧縮してフォールバック
   try {
     localStorage.setItem('nf_queue', JSON.stringify(queue));
   } catch(e) {
-    // Storage quota exceeded → 本文を3000字に圧縮して再試行
-    const slim = queue.map(q => ({...q, body: (q.body||'').substring(0,3000)}));
-    try { localStorage.setItem('nf_queue', JSON.stringify(slim)); } catch(e2) {}
+    // Lv1: base64サムネ画像だけ除去して再試行（画像はセッション中は保持）
+    const noThumbSrc = queue.map(q => ({
+      ...q,
+      thumbs: (q.thumbs||[]).map(t => ({...t, src: undefined}))
+    }));
+    try {
+      localStorage.setItem('nf_queue', JSON.stringify(noThumbSrc));
+      console.warn('saveQueue: thumbs stripped to save space');
+      return;
+    } catch(e2) {}
+    // Lv2: 本文も3000字に圧縮
+    const slim = noThumbSrc.map(q => ({...q, body: (q.body||'').substring(0,3000)}));
+    try { localStorage.setItem('nf_queue', JSON.stringify(slim)); } catch(e3) {
+      console.error('saveQueue: failed even after compression');
+    }
     console.warn('saveQueue: storage quota exceeded, body trimmed');
   }
   // Supabaseにもキューを同期

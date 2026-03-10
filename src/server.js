@@ -538,6 +538,16 @@ app.post('/api/draft-save', async (req, res) => {
     const draftUrl = page.url();
     console.log('  ✅ 保存完了 URL:', draftUrl);
 
+    // 下書き保存後にログアウト（セッションをクリア）
+    try {
+      await page.goto('https://note.com/logout', { waitUntil: 'networkidle2', timeout: 10000 });
+      console.log('  🚪 ログアウト完了');
+    } catch(e) {
+      console.log('  ℹ️ ログアウトスキップ:', e.message);
+    }
+    // セッションキャッシュを削除（次回は再ログイン）
+    delete sessionPages[email];
+
     res.json({ ok: true, draftUrl, saved });
 
   } catch (e) {
