@@ -560,9 +560,9 @@ app.get('/api/health', (_req, res) => {
 });
 
 // ─────────────────────────────────────────────
-// 起動
+// 起動（ポート重複時はわかりやすいメッセージを表示）
 // ─────────────────────────────────────────────
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log('\n╔══════════════════════════════════════════╗');
   console.log('║   NOTE FACTORY バックエンドサーバー v10   ║');
   console.log('╠══════════════════════════════════════════╣');
@@ -572,4 +572,18 @@ app.listen(PORT, () => {
   console.log('║   POST /api/draft-save  下書き自動保存   ║');
   console.log('║   GET  /api/health      ヘルスチェック   ║');
   console.log('╚══════════════════════════════════════════╝\n');
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log('\n╔══════════════════════════════════════════╗');
+    console.log('║   ✅ サーバーはすでに起動中です！         ║');
+    console.log(`║   http://localhost:${PORT} で稼働中         ║`);
+    console.log('║   このウィンドウを閉じても大丈夫です。   ║');
+    console.log('╚══════════════════════════════════════════╝\n');
+    process.exit(0); // 正常終了
+  } else {
+    console.error('サーバーエラー:', err.message);
+    process.exit(1);
+  }
 });
