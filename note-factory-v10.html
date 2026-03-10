@@ -1684,21 +1684,108 @@ async function regenThumbs(itemId) {
   toast('✅ 画像生成完了','⬇️ DLボタンでダウンロードできます');
 }
 
+// ─── Canvas フォールバック画像生成 ───────────────
+// Gemini APIが使えないときでも必ずデザイン画像を生成する
+function generateCanvasThumb(label, title, harmKey, idx) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1280; canvas.height = 720;
+  const ctx = canvas.getContext('2d');
+
+  // ジャンル別カラーパレット
+  const palettes = {
+    A: ['#0a2e1a','#0d5c2e','#1a8c50','#3acc66'],
+    R: ['#2e0a1a','#5c0d2e','#8c1a50','#cc3a80'],
+    H: ['#0a1e2e','#0d3e5c','#1a6e8c','#3ab0cc'],
+    M: ['#1a1a0a','#3a3a0d','#6a6a1a','#aaaa3a'],
+  };
+  const colors = palettes[harmKey] || palettes.A;
+  const accentColors = ['#c0001a','#1a3a8a','#1a7a3a','#8a601a','#6a1a8a'];
+
+  // 背景グラデーション
+  const grad = ctx.createLinearGradient(0, 0, 1280, 720);
+  grad.addColorStop(0, colors[0]);
+  grad.addColorStop(0.5, colors[1]);
+  grad.addColorStop(1, colors[2]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 1280, 720);
+
+  // デコレーション：右上の光
+  const glow = ctx.createRadialGradient(1100, 100, 0, 1100, 100, 500);
+  glow.addColorStop(0, colors[3] + '44');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, 1280, 720);
+
+  // アクセントライン
+  ctx.strokeStyle = accentColors[idx % 5] + 'aa';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(80, 680); ctx.lineTo(600, 680); ctx.stroke();
+
+  // ラベル（小）
+  ctx.fillStyle = accentColors[idx % 5];
+  ctx.font = 'bold 28px "Hiragino Kaku Gothic Pro", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, 80, 140);
+
+  // タイトルテキスト（折り返し）
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.font = 'bold 56px "Hiragino Kaku Gothic Pro", sans-serif';
+  ctx.textAlign = 'left';
+  const maxW = 1100;
+  const titleStr = (title || '').substring(0, 40);
+  let line = '', y = 260;
+  for (const ch of titleStr) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line, 80, y); line = ch; y += 76;
+      if (y > 560) break;
+    } else { line = test; }
+  }
+  if (line) ctx.fillText(line, 80, y);
+
+  // 下部バー
+  ctx.fillStyle = accentColors[idx % 5] + '33';
+  ctx.fillRect(0, 650, 1280, 70);
+
+  return canvas.toDataURL('image/png');
+}
+
 async function genThumbs(item) {
   const key = window.GEMINI_API_KEY || localStorage.getItem('nf_gemini_key') || '';
   const ac = ACCOUNTS.find(a=>a.id===item.acId)||{};
+  const harmKey = ac.harm || 'A';
+
+  // thumbPromptsが空（ぽにょ式・寝稼ぎ式Pro・愛太郎式などカスタム生成器）の場合はデフォルト生成
+  if (!item.thumbPrompts || item.thumbPrompts.length === 0) {
+    const genre = ac.genre || 'コンテンツ販売';
+    item.thumbPrompts = [
+      `Professional Japanese blog cover image for article titled "${(item.title||'').substring(0,30)}", genre: ${genre}, clean modern design, 16:9 ratio, no text, high quality`,
+      `Engaging intro image for Japanese blog about ${genre}, visual storytelling, 16:9 ratio, no text`,
+      `Summary and action-oriented image for ${genre} blog, 16:9 ratio, no text`,
+    ];
+  }
+
   item.thumbs = item.thumbPrompts.map((p,i)=>({
     prompt:p,
     label:['カバー','導入','まとめ','実績','CTA'][i]||`画像${i+1}`,
     isDemo:true,
     color:['#c0001a20','#1a3a8a20','#1a7a3a20','#8a601a20','#6a1a8a20'][i%5]
   }));
+
   if(!key) {
-    toast('⚙️ Gemini APIキー未設定','⚙️ API設定ボタンからキーを入力してください');
+    // Geminiキー未設定 → Canvasで自動生成
+    toast('🖼️ デザイン画像を自動生成中...','Canvasで生成しています（Geminiキー未設定）');
+    item.thumbs = item.thumbs.map((t, i) => ({
+      ...t,
+      src: generateCanvasThumb(t.label, item.title, harmKey, i),
+      isDemo: false
+    }));
+    renderHistory();
+    saveQueue();
     return;
   }
 
-  // 試すモデル（新しい順にフォールバック）
+  // ─── Gemini Imagen API 試行 ───
   const IMAGEN_MODELS = [
     'imagen-3.0-generate-002',
     'imagen-3.0-fast-generate-001',
@@ -1707,13 +1794,15 @@ async function genThumbs(item) {
 
   const maxThumbs = Math.min(item.thumbPrompts.length, 3);
   let workingModel = null;
+  let geminiOk = false;
 
   for(let i=0;i<maxThumbs;i++){
     const label = i===0?'サムネ（カバー）':i===1?'導入画像':'まとめ画像';
-    toast(`🖼️ 画像生成中 ${i+1}/${maxThumbs}`,`${label}をGemini Imagenで生成中...`);
+    toast(`🖼️ Gemini画像生成中 ${i+1}/${maxThumbs}`,`${label}を生成中...`);
 
     const enhancedPrompt = buildThumbPrompt(item.thumbPrompts[i], ac, item);
     let generated = false;
+    let lastError = '';
 
     const modelsToTry = workingModel ? [workingModel] : IMAGEN_MODELS;
     for(const model of modelsToTry){
@@ -1730,9 +1819,13 @@ async function genThumbs(item) {
           }
         );
         const d = await r.json();
-        console.log(`Gemini[${model}] status:${r.status}`, JSON.stringify(d).substring(0,300));
+        console.log(`Gemini[${model}] status:${r.status}`, JSON.stringify(d).substring(0,400));
 
-        if(d.error){ console.warn(`モデル ${model} エラー:`, d.error.message); continue; }
+        if(d.error){
+          lastError = `${model}: ${d.error.message||d.error.status}`;
+          console.warn(`モデル ${model} エラー:`, d.error);
+          continue;
+        }
 
         const b64 = d.predictions?.[0]?.bytesBase64Encoded;
         if(b64){
@@ -1740,17 +1833,36 @@ async function genThumbs(item) {
           item.thumbs[i].isDemo = false;
           workingModel = model;
           generated = true;
+          geminiOk = true;
           console.log(`✅ 画像${i+1}枚目 (${model})`);
           break;
+        } else {
+          lastError = `${model}: predictionsにデータなし`;
         }
-      }catch(e){ console.warn(`モデル ${model}:`, e.message); }
+      }catch(e){
+        lastError = `${model}: ${e.message}`;
+        console.warn(`モデル ${model}:`, e.message);
+      }
     }
 
     if(!generated){
-      toast('⚠️ 画像生成失敗',`${label}の生成に失敗。ブラウザのコンソール(F12)でエラー詳細を確認してください`);
+      // Gemini失敗 → Canvasフォールバック
+      console.warn(`画像${i+1}枚目 Gemini失敗 → Canvasで代替生成。エラー:`, lastError);
+      item.thumbs[i].src = generateCanvasThumb(label, item.title, harmKey, i);
+      item.thumbs[i].isDemo = false;
+      if(i===0 && lastError){
+        // 最初の1枚だけエラー内容をトーストで通知
+        toast('⚠️ Gemini失敗→Canvas代替', lastError.substring(0,60));
+      }
     }
-    if(i < maxThumbs-1) await sleep(1500);
+    renderHistory();
+    if(i < maxThumbs-1) await sleep(1200);
   }
+
+  if(!geminiOk){
+    console.warn('Gemini Imagen: 全モデル失敗。Canvas画像を使用しています。');
+  }
+  saveQueue();
   renderHistory();
 }
 
