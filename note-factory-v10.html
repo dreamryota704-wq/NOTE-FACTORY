@@ -642,42 +642,69 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
      TAB 5: note連携・下書き保存
 ══════════════════════════════════════ -->
 <div class="pane" id="pane-connect">
+
+  <!-- ★ 常時表示：サーバー状態バナー -->
+  <div style="background:linear-gradient(135deg,#0d1a12,#0d2018);border:1px solid rgba(0,168,120,.3);border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <div>
+      <div style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;margin-bottom:4px">🖥️ NOTE FACTORY サーバー状態</div>
+      <span class="server-badge" style="font-size:14px;font-weight:900;font-family:var(--fm)">🔴 サーバー未起動</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+      <button class="btn b-o b-xs" onclick="pollServerHealth()">🔄 再確認</button>
+      <div id="retry-queue-badge" style="display:none;font-size:10px;font-weight:700;color:#f05;background:rgba(255,0,80,.08);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,0,80,.2)"></div>
+    </div>
+  </div>
+
+  <!-- ★ 未保存の下書きを一括送信 -->
+  <div id="pending-draft-panel" style="background:linear-gradient(135deg,rgba(255,200,0,.06),rgba(255,100,0,.04));border:1.5px solid rgba(255,180,0,.3);border-radius:10px;padding:14px 18px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div>
+        <div style="font-size:9px;font-weight:800;color:rgba(220,160,0,.9);letter-spacing:.18em;margin-bottom:4px">📤 未保存の下書きキュー</div>
+        <div id="pending-draft-count" style="font-size:13px;font-weight:800;color:#1c2e22">キューを確認中...</div>
+        <div style="font-size:10px;color:#5a7f68;margin-top:3px">サーバー起動後に自動送信 or 下のボタンで手動送信</div>
+      </div>
+      <button class="btn b-r b-sm" onclick="manualFlushDrafts()" style="white-space:nowrap;min-width:120px">📤 まとめて保存</button>
+    </div>
+  </div>
+
   <div class="g2">
     <div>
-      <div class="sec">NOTE アカウント連携</div>
-      <div id="note-connect-list"></div>
-      <div class="card" style="margin-top:12px">
+      <!-- STEP 1: メール・パスワード入力 -->
+      <div style="font-size:9px;font-weight:900;color:var(--em3);letter-spacing:.2em;margin-bottom:8px">STEP 1 — note.comのメール・パスワードを入力</div>
+      <div class="card" style="margin-bottom:14px;border:1.5px solid var(--em4)">
         <div class="card-body">
-          <div class="sec" style="margin-bottom:10px">認証情報の入力（アカウントごと）</div>
-          <div class="fg"><label class="fl">アカウント</label><select class="fsl" id="conn-ac"></select></div>
-          <div class="fg"><label class="fl">note メールアドレス</label><input type="email" class="fi" id="conn-email" placeholder="example@mail.com"></div>
-          <div class="fg" style="margin-bottom:0"><label class="fl">パスワード</label><input type="password" class="fi" id="conn-pw" placeholder="●●●●●●●●"></div>
-          <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:9px 12px;font-size:10px;color:rgba(255,200,0,.7);margin-top:10px;border-radius:2px">
-            ⚠️ 認証情報はブラウザのローカルストレージにのみ保存されます。外部サーバーには送信しません。
+          <div class="fg"><label class="fl">アカウントを選択</label><select class="fsl" id="conn-ac"></select></div>
+          <div class="fg"><label class="fl">📧 note.com メールアドレス</label><input type="email" class="fi" id="conn-email" placeholder="example@mail.com" style="font-size:13px"></div>
+          <div class="fg" style="margin-bottom:0"><label class="fl">🔑 note.com パスワード</label><input type="password" class="fi" id="conn-pw" placeholder="●●●●●●●●" style="font-size:13px"></div>
+          <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:9px 12px;font-size:10px;color:rgba(180,150,0,.9);margin-top:10px;border-radius:4px">
+            🔒 認証情報はこのブラウザのみに保存。外部サーバーには一切送信しません。
           </div>
-          <button class="btn b-r" style="width:100%;margin-top:12px" onclick="saveNoteAuth()">🔗 認証情報を保存・接続テスト</button>
+          <button class="btn b-r" style="width:100%;margin-top:12px;font-size:13px" onclick="saveNoteAuth()">💾 保存して接続テスト</button>
         </div>
       </div>
+
+      <!-- STEP 2: サーバー連携状態 -->
+      <div style="font-size:9px;font-weight:900;color:var(--em3);letter-spacing:.2em;margin-bottom:8px">STEP 2 — 接続状態を確認</div>
+      <div id="note-connect-list"></div>
     </div>
     <div>
-      <!-- サーバー起動案内 -->
+      <!-- STEP 3: サーバー起動案内 -->
+      <div style="font-size:9px;font-weight:900;color:var(--em3);letter-spacing:.2em;margin-bottom:8px">STEP 3 — サーバーを起動（初回のみ）</div>
       <div style="background:rgba(0,168,120,.06);border:1px solid rgba(0,168,120,.25);padding:13px 15px;border-radius:6px;margin-bottom:14px;font-size:11px;line-height:1.9;color:#1c2e22">
-        <div style="font-weight:900;font-size:10px;letter-spacing:.15em;color:var(--em3);margin-bottom:6px">🖥️ バックエンドサーバーの起動方法</div>
-        <div style="margin-bottom:4px">下書き保存には <strong>ローカルサーバー</strong> が必要です。</div>
-        <div style="font-family:var(--fm);background:#0d1a12;color:#7affb2;padding:8px 12px;border-radius:4px;font-size:10px;margin:6px 0;line-height:2">
-          <div># リポジトリをクローン（初回のみ）</div>
-          <div>git clone https://github.com/dreamryota704-wq/NOTE-FACTORY.git</div>
+        <div style="font-weight:900;font-size:12px;color:var(--em3);margin-bottom:8px">🖥️ サーバー起動.command をダブルクリック！</div>
+        <div style="background:#f0faf5;border:1px solid var(--em4);border-radius:6px;padding:10px 12px;font-size:12px;margin-bottom:8px">
+          📂 NOTE-FACTORYフォルダの中にある<br>
+          <strong style="font-size:14px;color:var(--em3)">「サーバー起動.command」</strong><br>
+          をダブルクリックするだけ！
+        </div>
+        <div style="font-size:10px;color:#5a7f68;margin-bottom:6px">▼ または ターミナルで以下を実行:</div>
+        <div style="font-family:var(--fm);background:#0d1a12;color:#7affb2;padding:8px 12px;border-radius:4px;font-size:10px;margin:4px 0;line-height:2">
           <div>cd NOTE-FACTORY</div>
-          <div>&nbsp;</div>
-          <div># 依存関係インストール（初回のみ）</div>
-          <div>npm install</div>
-          <div>&nbsp;</div>
-          <div># サーバー起動</div>
           <div>node src/server.js</div>
         </div>
-        <div style="color:#5a7f68;font-size:10px">起動後は <code style="background:var(--em5);padding:1px 5px;border-radius:2px">http://localhost:3001</code> で待機。ブラウザは開いたままにしてください。</div>
+        <div style="color:#5a7f68;font-size:10px;margin-top:6px">起動するとChromeが自動で開き、note.comにログイン → 下書き保存まで自動で行います</div>
         <div id="server-status-bar" style="margin-top:8px"></div>
-        <button class="btn b-o b-xs" style="margin-top:6px;width:100%" onclick="checkServerHealth()">🔄 サーバー接続確認</button>
+        <button class="btn b-o b-xs" style="margin-top:6px;width:100%" onclick="pollServerHealth()">🔄 接続確認</button>
       </div>
 
       <div class="sec">下書き保存 実行</div>
@@ -963,6 +990,72 @@ let delTargetId = null;
 let noteType = 'free';
 let researchedPersona = null;
 let isGenerating = false;
+
+// ─── 下書き保存リトライキュー ───────────────────
+// 保存に失敗したnoteをキューに積んで、サーバー起動時に自動送信
+let DRAFT_RETRY_QUEUE = JSON.parse(localStorage.getItem('nf_draft_retry') || '[]');
+function saveDraftRetryQueue() { localStorage.setItem('nf_draft_retry', JSON.stringify(DRAFT_RETRY_QUEUE)); }
+
+// サーバー死活監視（30秒ごと）
+let serverOnline = false;
+async function pollServerHealth() {
+  try {
+    const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(3000) });
+    const wasOffline = !serverOnline;
+    serverOnline = r.ok;
+    updateServerBadge(serverOnline);
+    if (serverOnline && wasOffline) {
+      // 復活した → リトライキューを送信
+      flushDraftRetryQueue();
+    }
+  } catch(e) {
+    serverOnline = false;
+    updateServerBadge(false);
+  }
+}
+function updateServerBadge(online) {
+  document.querySelectorAll('.server-badge').forEach(el => {
+    el.textContent = online ? '🟢 サーバー稼働中' : '🔴 サーバー未起動';
+    el.style.color  = online ? '#3acc66' : '#f05';
+  });
+  const bar = document.getElementById('server-status-bar');
+  if (bar) {
+    bar.innerHTML = online
+      ? '<span style="color:#3acc66;font-size:11px;font-weight:700">✅ サーバー接続中 — 下書き自動保存が使えます</span>'
+      : '<span style="color:#f05;font-size:11px;font-weight:700">❌ サーバー未起動 — サーバー起動.commandをダブルクリックしてください</span>';
+  }
+  // 未保存バッジ更新
+  const pending = DRAFT_RETRY_QUEUE.length;
+  const retryBadge = document.getElementById('retry-queue-badge');
+  if (retryBadge) {
+    retryBadge.textContent = pending > 0 ? `📤 未保存 ${pending}件` : '';
+    retryBadge.style.display = pending > 0 ? 'block' : 'none';
+  }
+  // ペンディングカウント表示
+  const pendingCount = document.getElementById('pending-draft-count');
+  if (pendingCount) {
+    if (pending === 0) {
+      pendingCount.textContent = '✅ 未保存なし — すべて保存済みです';
+      pendingCount.style.color = '#3acc66';
+    } else {
+      pendingCount.textContent = `⏳ ${pending}件のnoteが保存待ち`;
+      pendingCount.style.color = '#d4860a';
+    }
+  }
+  // ヘッダータブのバッジ更新
+  const connectTab = document.querySelector('.tab[onclick="sw(\'connect\')"]');
+  if (connectTab && pending > 0) {
+    if (!connectTab.querySelector('.draft-pending-dot')) {
+      const dot = document.createElement('span');
+      dot.className = 'draft-pending-dot';
+      dot.style.cssText = 'display:inline-block;width:7px;height:7px;border-radius:50%;background:#f05;margin-left:4px;vertical-align:middle';
+      connectTab.appendChild(dot);
+    }
+  } else if (connectTab) {
+    const dot = connectTab.querySelector('.draft-pending-dot');
+    if (dot) dot.remove();
+  }
+}
 let GENERATED_TITLES = JSON.parse(localStorage.getItem('nf_gen_titles')||'[]');
 
 // ══════════════════════════════════════════════
@@ -980,6 +1073,10 @@ function init() {
   document.getElementById('daily-date').textContent = new Date().toLocaleDateString('ja-JP',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
   const tmr = new Date(); tmr.setDate(tmr.getDate()+1); tmr.setHours(5,0,0,0);
   document.getElementById('next-run').textContent = tmr.toLocaleString('ja-JP',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  // ─ サーバー死活監視スタート（初回即時 + 30秒ごと）
+  pollServerHealth();
+  setInterval(pollServerHealth, 30000);
 }
 
 // ══════════════════════════════════════════════
@@ -2247,21 +2344,13 @@ async function saveNoteAuth() {
   }
 }
 
-// サーバー接続確認
+// サーバー接続確認（旧）→ pollServerHealth に委譲
 async function checkServerHealth() {
-  const bar = document.getElementById('server-status-bar');
-  if (bar) bar.innerHTML = '<span style="color:var(--gold2);font-size:10px">🔄 確認中...</span>';
-  try {
-    const r = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(4000) });
-    if (r.ok) {
-      const d = await r.json();
-      if (bar) bar.innerHTML = '<span style="color:#3acc66;font-size:10px;font-weight:800">✅ サーバー接続中 — 下書き保存が使えます</span>';
-      toast('✅ サーバー接続中', `localhost:3001 稼働中 (v${d.version})`);
-    } else {
-      throw new Error('HTTP ' + r.status);
-    }
-  } catch(e) {
-    if (bar) bar.innerHTML = '<span style="color:var(--red2);font-size:10px;font-weight:800">❌ サーバー未起動 — node src/server.js を実行してください</span>';
+  await pollServerHealth();
+  if (serverOnline) {
+    toast('✅ サーバー接続中', 'localhost:3001 稼働中 — 下書き自動保存が使えます');
+  } else {
+    toast('❌ サーバー未起動', 'サーバー起動.command をダブルクリックしてください');
   }
 }
 
@@ -3438,9 +3527,78 @@ async function autoSaveDraft(item) {
       }
     }
   } catch(e) {
-    // サーバー未起動 → サイレント（後で手動保存可能）
-    console.info('Auto draft: server not running, skip', e.message);
+    // サーバー未起動 → リトライキューに追加して後で自動送信
+    console.info('Auto draft: server not running, queuing for retry:', e.message);
+    const already = DRAFT_RETRY_QUEUE.find(d => d.itemId === item.id);
+    if (!already) {
+      DRAFT_RETRY_QUEUE.push({
+        itemId: item.id,
+        acId: item.acId,
+        queuedAt: new Date().toISOString()
+      });
+      saveDraftRetryQueue();
+      updateServerBadge(false);
+      toast('📥 保存キューに追加', `サーバー起動後に自動送信します（${DRAFT_RETRY_QUEUE.length}件待機中）`);
+    }
   }
+}
+
+// リトライキューを一括送信（サーバー起動後に自動実行）
+async function flushDraftRetryQueue() {
+  if (DRAFT_RETRY_QUEUE.length === 0) return;
+  toast('🔄 未保存の下書きを送信中...', `${DRAFT_RETRY_QUEUE.length}件を自動送信します`);
+  const toSend = [...DRAFT_RETRY_QUEUE];
+  for (const entry of toSend) {
+    const item = queue.find(q => q.id === entry.itemId);
+    if (!item || item.drafted) {
+      // すでに保存済みか存在しない → キューから除去
+      DRAFT_RETRY_QUEUE = DRAFT_RETRY_QUEUE.filter(d => d.itemId !== entry.itemId);
+      continue;
+    }
+    const auth = NOTE_AUTH[entry.acId] || {};
+    if (!auth.email) continue;
+    try {
+      const res = await fetch('http://localhost:3001/api/draft-save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: auth.email,
+          password: auth.password,
+          title: item.title,
+          body: item.body,
+          tags: item.tags || [],
+          price: item.type === 'paid' ? (PRICE_MAP_DRAFT[item.priceKey] || 0) : 0,
+          coverImage: item.thumbs?.[0]?.src || null
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const draftUrl = data.draftUrl || data.url;
+        if (draftUrl) {
+          item.draftUrl = draftUrl;
+          item.drafted  = true;
+          saveQueue();
+          DRAFT_RETRY_QUEUE = DRAFT_RETRY_QUEUE.filter(d => d.itemId !== entry.itemId);
+          saveDraftRetryQueue();
+          toast('✅ 下書き保存完了', `「${item.title?.substring(0,20)}」をnoteに保存しました`);
+        }
+      }
+    } catch(e2) {
+      console.warn('Retry send failed:', e2.message);
+    }
+    await new Promise(r => setTimeout(r, 2000)); // 2秒待機
+  }
+  saveDraftRetryQueue();
+  renderHistory();
+  updateServerBadge(serverOnline);
+}
+
+// 手動で未保存を一括送信するボタン用
+async function manualFlushDrafts() {
+  const ok = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(3000) }).then(r=>r.ok).catch(()=>false);
+  if (!ok) { toast('❌ サーバー未起動', 'サーバー起動.command をダブルクリックして起動してください'); return; }
+  await flushDraftRetryQueue();
+  if (DRAFT_RETRY_QUEUE.length === 0) toast('✅ 全件保存完了', '下書きキューは空になりました');
 }
 
 // ══════════════════════════════════════════════

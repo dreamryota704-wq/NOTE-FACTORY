@@ -57,15 +57,18 @@ async function launchBrowser() {
     console.log('  Puppeteer 同梱 Chromium を使用');
   }
 
+  // headless: false にして、ブラウザ画面をユーザーに見せる
   const launchOptions = {
-    headless: true,
+    headless: false,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-blink-features=AutomationControlled',
+      '--window-size=1200,800',
+      '--window-position=100,50',
     ],
-    defaultViewport: { width: 1280, height: 900 },
+    defaultViewport: null, // ウィンドウサイズに合わせる
   };
   if (chromePath) launchOptions.executablePath = chromePath;
 
