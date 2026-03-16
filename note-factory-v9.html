@@ -479,6 +479,60 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
               <div class="btn b-g" id="type-paid-btn" onclick="setNoteType('paid')" style="justify-content:center;padding:10px;opacity:.45">💰 有料note</div>
             </div>
           </div>
+
+          <!-- チャトレ特化モード -->
+          <div id="chatreska-mode-wrap" style="display:none">
+            <div style="background:linear-gradient(135deg,#fff0f8,#fff8e8);border:2px solid #f0a0c0;border-radius:10px;padding:14px;margin-bottom:4px">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div style="font-size:12px;font-weight:900;color:#c0004a;letter-spacing:.05em">🎀 チャトレ特化モード</div>
+                <div style="font-size:9px;color:#a0006a;font-weight:700;background:#ffe0f0;padding:2px 8px;border-radius:10px">SKILL 1〜23 内蔵</div>
+              </div>
+              <div class="fg" style="margin-bottom:8px">
+                <label style="font-size:9px;font-weight:800;color:#a0006a;letter-spacing:.08em;display:block;margin-bottom:5px">読者層（刺さる切り口を自動選択）</label>
+                <select class="fsl" id="chatreska-reader" style="border-color:#f0a0c0">
+                  <option value="auto">🤖 AIが自動判断</option>
+                  <option value="syufu">👩‍👧 主婦（パート比較・身バレ・扶養）</option>
+                  <option value="yakushoku">💄 夜職経験者（体力・稼ぎ維持・転向）</option>
+                  <option value="mikeiken">✨ 未経験・自信なし（容姿不要・初配信実績）</option>
+                  <option value="kasege">📉 配信中だが稼げない（常連・コイン設計）</option>
+                  <option value="fuku">💼 副業志望（身バレ・スキマ時間・初期費用なし）</option>
+                </select>
+              </div>
+              <div class="fg" style="margin-bottom:8px">
+                <label style="font-size:9px;font-weight:800;color:#a0006a;letter-spacing:.08em;display:block;margin-bottom:5px">記事テーマ（空欄でAIが選ぶ）</label>
+                <select class="fsl" id="chatreska-theme" style="border-color:#f0a0c0">
+                  <option value="auto">🤖 AIが最適テーマを選ぶ</option>
+                  <option value="s1">💰 コイン設計・ゴール設定の思想</option>
+                  <option value="s2">🎤 配信中の接客・焦らしテクニック</option>
+                  <option value="s3">👑 常連・太客の作り方（完全マニュアル）</option>
+                  <option value="s4">🧠 脳科学・心理学で課金させる5技術</option>
+                  <option value="s5">⚡ たぬかな戦略（上級・特殊）</option>
+                  <option value="s6">🕵️ 身バレゼロの完全対策</option>
+                  <option value="s7">📊 確定申告・税金・経費の実践知識</option>
+                  <option value="s8">🚀 初配信で最大結果を出す準備</option>
+                  <option value="s9">⏰ 稼ぎを最大化する時間帯戦略</option>
+                  <option value="s10">🎯 ターゲット別・強みの活かし方</option>
+                  <option value="s11">🏢 事務所選びの完全チェックリスト</option>
+                  <option value="s13">📈 今が一番稼ぎやすい3根拠（円安ボーナス）</option>
+                  <option value="s14">✅ 向いてる人・向いてない人</option>
+                  <option value="s15">🏆 月100万達成のロードマップ</option>
+                  <option value="s16">💜 ラブンス完全活用法</option>
+                  <option value="s17">🌍 「海外＝怖い」誤解の解体</option>
+                  <option value="s22">👨‍👩‍👧 確定申告の扶養問題攻略</option>
+                </select>
+              </div>
+              <div class="fg" style="margin-bottom:0">
+                <label style="font-size:9px;font-weight:800;color:#a0006a;letter-spacing:.08em;display:block;margin-bottom:5px">記事構成パターン</label>
+                <select class="fsl" id="chatreska-pattern" style="border-color:#f0a0c0">
+                  <option value="auto">🤖 AIが最適パターンを選ぶ</option>
+                  <option value="p1">❌→✅ 悩み否定型（勘違いを指摘して解決）</option>
+                  <option value="p2">📋 細分化解説型（〇〇が稼げない〇つの理由）</option>
+                  <option value="p3">⚖️ 比較型（国内 vs 海外 / 夜職 vs チャトレ）</option>
+                  <option value="p4">📖 ノウハウ開示→事務所誘導型</option>
+                </select>
+              </div>
+            </div>
+          </div>
           <div class="fg" id="price-field" style="display:none">
   <label class="fl">価格帯（¥での表示価格）</label>
   <select class="fsl" id="note-price">
@@ -819,7 +873,7 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
     <div class="mb">
       <div class="fr2">
         <div class="fg"><label class="fl">アカウント名 *</label><input type="text" class="fi" id="na-name" placeholder="例: AI×note販売垢"></div>
-        <div class="fg"><label class="fl">HARMカテゴリ</label><select class="fsl" id="na-harm"><option value="H">H — Health（健康・美容）</option><option value="A" selected>A — Ambition（副業・AI・稼ぐ）</option><option value="R">R — Relationship（恋愛・復縁）</option><option value="M">M — Money（投資・節約）</option></select></div>
+        <div class="fg"><label class="fl">HARMカテゴリ</label><select class="fsl" id="na-harm"><option value="H">H — Health（健康・美容）</option><option value="A" selected>A — Ambition（副業・AI・稼ぐ）</option><option value="R">R — Relationship（恋愛・復縁）</option><option value="M">M — Money（投資・節約）</option><option value="C">🎀 C — Chatreska（チャトレ・ストチャ）</option></select></div>
       </div>
       <div class="fg"><label class="fl">発信ジャンル *</label><input type="text" class="fi" id="na-genre" placeholder="例: note販売×AI自動化×副業"></div>
       <div class="fr2">
@@ -1290,6 +1344,9 @@ function onAcChange() {
       <div style="color:var(--paper3)">対象: ${p.target}</div>
       <div style="color:var(--ink6)">悩み: ${p.pains?.slice(0,2).join('、')}</div>
     </div>`;
+  // チャトレアカウントならモード表示
+  const isChatreska = ac.harm === 'C' || /チャトレ|ストチャ|chatreska/i.test(ac.genre||'');
+  document.getElementById('chatreska-mode-wrap').style.display = isChatreska ? 'block' : 'none';
 }
 
 async function startGen() {
@@ -1351,6 +1408,288 @@ async function startGen() {
   toast('🎉 生成完了',`${count}本のnoteを生成しました`);
 }
 
+// ══════════════════════════════════════════════
+// チャトレ・ストチャ 専用note生成（SKILL 1〜23完全内蔵）
+// ══════════════════════════════════════════════
+const CHATRESKA_KNOWLEDGE = `
+【チャトレ・ストチャ ノウハウマスターデータ SKILL 1〜23】
+
+■ SKILL1 コイン設計の思想
+- コインは「集める」ではなく「設計して引き出す」。仕組みが先、努力は後。
+- ゴールは1個500コインより75コイン以下を最大5個同時設定が正解（買う側に「まだ遠い」と感じさせない）
+- チップメニューは最低10〜15個。エントリー層1〜100coin/中間層100〜500coin/ハイチケット1000coin以上の3層構造
+- デコイ効果：「3分300coin vs 5分400coin」は多数が5分を選ぶ
+- Kingシステム：認められたい・特別扱いされたいが課金の最大動機。閾値を低く設定して名指し特別扱い
+- プライベートショー（1分8〜150coin）+ スパイモード（覗き見側からもコイン）で二重収益
+- ファンクラブサブスク：継続率を上げる唯一の方法は登録者に「ありがとう」を個別に伝えること
+- 最初の14日間プロモーション期間：このブーストを逃すと同じ結果は出ない
+
+■ SKILL2 配信中の接客テクニック
+- 聞き上手が最強：男性は話を聞いてほしい人が圧倒的多数
+- 掘り下げ：「それでどうなったの？」「え、それ大変じゃない？」「もっと聞かせて」
+- 名前を呼ぶ回数が多い子ほど常連がつく（生理的に「覚えてくれてる」「特別扱い」と感じる）
+- リアクションはオーバーに：画面越しでは普通のリアクションは半分も伝わらない
+- 焦らしの技術：「もうちょっと待って」「いい子にしてたらね」。ドーパミン分泌を最大化
+- パブリックは「入口」：全部やってしまうと課金する理由がなくなる。「この先が見たい」と思わせるだけ
+
+■ SKILL3 常連・太客製造
+- 常連10人＝1配信で75,000〜150,000円
+- チャット後すぐ「名前＋話した内容」をメモ→次に活かす
+- アフターメール（チャット後DM）でリピート率が2倍。「後で秘密メッセージ送るね」と先に言う
+- 特別感の演出：「〇〇さんだけに言うんだけどね…」実際に特別なことをしなくていい
+- 距離感：「もうちょっとで手が届きそう」を維持。近すぎると飽きる、遠すぎると諦められる
+
+■ SKILL4 脳科学・心理学5大テクニック
+1. 間欠強化（最重要）：「たまに報酬」がドーパミン最大化。常に100%のサービスはNG
+2. ツァイガルニク効果：「中断・未完成」を強く記憶する。一番盛り上がった瞬間にあえて待たせる
+3. ベン・フランクリン効果：投資した相手を好きになる。チップを投げさせると好意が強化される
+4. ミラーニューロン・オキシトシン：配信者が本当にリラックスして幸せそうに笑うと視聴者にも幸せホルモンが出る
+5. ギャップ萌え：普段は清楚→たまに見せる大胆さ。予測の裏切りが最も強く脳に刺激
+
+■ SKILL5 たぬかな戦略（上級）
+- 全員に好かれることを完全に諦め、特定層（弱者男性・強い言葉を求める人）だけに深く刺さる
+- 8割の鞭（毒舌・罵倒）＋2割の飴（共感・身内感）。たまに見せる共感の一言に強烈ドーパミン
+- 「素の開示」：失敗も汚い部分も全部さらけ出す→守ってあげたい欲を刺激
+- 弱点をネタに変える：「しゃべれない」「若くない」「見た目に自信がない」→全部演出に変える
+
+■ SKILL6 身バレゼロ対策
+- AIリアルタイム顔加工（隣の人に見せても誰かわからないレベル）
+- 本名不使用・地域はぼかす・背景に個人情報を映さない・SNSと一切紐づけない・配信専用メアド
+- 身バレした人は一人もいない実績
+- 会社バレ対策：確定申告時に「住民税は自分で払います（普通徴収）」にチェック
+
+■ SKILL7 確定申告・税金
+- 専業：年間純利益48万超で申告義務。副業：20万超
+- 経費（確実）：配信用PC・カメラ・マイク・照明・グリーンバック・配信用衣装・ウィッグ
+- 経費（按分）：家賃・電気代・スマホ代（配信スペース面積・時間割合）
+- 扶養問題：純利益48万以下なら維持。月7〜8万×12ヶ月は2〜3日で稼げる
+- 職業欄は「サービス業」または「インターネット配信業」でOK
+
+■ SKILL8 初配信準備
+- プロフィール・キャラクター設計→サムネ→待機中の過ごし方→最初の挨拶→会話の広げ方→コインを引き出すタイミング
+- 初配信実績：82,460円（完全初心者・夜職経験なし）、2時間58,656円、試しに1時間2万円
+
+■ SKILL9 時間帯戦略
+- 朝（6〜10時）：北米ユーザー+日本の朝。国内チャトレの1日分を稼ぐ子が続出
+- 夜〜深夜（20時〜深夜3時）：最強。日本・北米・欧州が重なる。時給2万円超えも現実的
+
+■ SKILL10 ターゲット別強み
+- 主婦：聞く力が最初からある。週3で月30万（元スーパーパートの4倍以上）
+- 夜職経験者：男の扱い方を知っている。未経験者が3ヶ月かかることを1ヶ月で達成
+- 30〜40代：「居心地の良さ」「癒し」「特別扱い」への需要。40代週3で月60万の実績
+- 未経験・容姿に自信がない：日本人女性は海外で「清楚でミステリアス」ブランドを自動保持
+
+■ SKILL11 事務所選び5点
+①風営法（映像送信型性風俗特殊営業）届出の確認②報酬率30〜50%・支払い時期③サポート内容の具体性④ノルマ・違約金なし⑤口コミ・返信速度
+
+■ SKILL13 今が稼ぎやすい3根拠
+①チャット文化の一般化（パイが拡大）②投げ銭文化の完全普及（心理的ハードル低下）③海外サービスの台頭（複合収益構造）+ 円安ボーナス（200ドルが2万→3万円以上）
+
+■ SKILL14 向いてる人・向いてない人
+向いてる：在宅志望の主婦・夜職から移りたい人・スキマ時間で副業・配信中だが稼げない人・年齢を理由に諦めかけている30〜40代
+向いてない：プライドが高い・「でも私は」と自己流を押し通す・人と直接会って働きたい
+
+■ SKILL15 月100万ロードマップ
+週2（2〜3h）月10〜20万 / 週3（2〜3h）月20〜30万 / 週4（3〜4h）月30〜50万 / 週5〜6（5〜6h）月100万
+
+■ SKILL16 ラブンス（Lovense）
+- チップを投げると自動でバイブ振動→ゲームのガチャ感覚で課金心理が働く
+- ゴール設定：「1000coin集まったら〇〇する」で1配信数万円も
+- リアクションのセリフ例：「あっ…！」「えっ、強い…！」「やばい…もっと来て…」
+
+■ SKILL17 海外への誤解解体
+- 法律的にはOK（風営法届出済み事務所選択）
+- 「脱がないと稼げない」は誤解。会話力だけで稼げる
+- 英語不要（日本人ユーザーが9割の事務所あり）
+- 待機地獄がない・収入源が複数・年齢・容姿への許容度が広い
+
+■ SKILL18 記事に使える数字
+- 1コイン＝5セント（USD）、10,000コイン＝約75,000円
+- 初配信82,460円、2時間58,656円、配信2回目2時間42,478円
+- Aさん35歳主婦週3月30万、Mさん22歳学生週2月15万、Cさん35歳シングルマザー週4月50万
+- パート比較：コンビニ時給1,000〜1,200円 vs 週3・1日5時間・月66,000円
+
+■ SKILL19 事務所の言語化フレーズ
+「風営法取得済み」「ノルマなし・罰則なし・違約金なし」「嫌な客は自分の判断で切っていい」「これまで身バレした子は一人もいない」「一人で戦わせることは絶対にしない」
+
+■ SKILL20 対比・比較フレーム
+ゴール設定：500coin1個NG → 75coin5個連続OK
+パブリックの使い方：全出しNG → 「先が見たい」と思わせるだけOK
+アドバイス：「でも私は」自己流NG → 素直に実行OK
+稼ぐ考え方：「集める」NG → 「設計して引き出す」OK
+
+■ SKILL22 扶養問題攻略
+- 儲け（純利益）48万超で扶養から外れる可能性
+- 一番安全：年収100万以下かつ所得48万以下
+- チャトレは稼ぎをコントロールしやすい（「今月は稼ぎすぎたから来月は控えめに」ができる）
+
+■ SKILL23 読者別「刺さる切り口」マップ
+主婦：「パート代じゃ足りない」「扶養内で稼ぎたい」「旦那にバレたくない」「年齢が心配」
+夜職経験者：「身体がキツい」「いつまで続けられるか」「待機地獄が嫌」
+未経験・自信ない：「私なんて無理」「スキルがない」「容姿に自信がない」
+配信中だが稼げない：「お気に入りは増えるのに稼げない」「常連がつかない」「コイン設計がわからない」
+副業志望：「バレずに副業したい」「時間がない」「初期費用をかけたくない」
+
+■ 著者フレーズ（記事に自然に使う）
+断言系：「ぶっちゃけ、〜」「結論から言うと、〜」「はっきり言います。関係ない。」「才能じゃない。やり方の問題だから。」「逆なんだよね。」
+共感系：「気持ちはめちゃくちゃわかる。」「心当たりある人、いるんじゃない？」「怖いのは普通のこと。」
+行動促進系：「本気で〜したい人、LINEで相談乗るよ。」「無理に勧誘とかしないから、気軽に連絡してね。」
+`;
+
+const CHATRESKA_READER_MAP = {
+  syufu: {
+    label: '主婦',
+    pains: 'パート代じゃ足りない・扶養内で稼ぎたい・旦那にバレたくない・年齢が心配',
+    themes: 'パート比較・身バレ対策・確定申告・年齢は武器になる'
+  },
+  yakushoku: {
+    label: '夜職経験者',
+    pains: '身体がキツい・いつまで続けられるか・稼ぎは落としたくない・待機地獄が嫌',
+    themes: '夜職転向・スキル活用・稼ぎ比較・身体の負担ゼロ'
+  },
+  mikeiken: {
+    label: '未経験・自信なし',
+    pains: '私なんて無理・スキルがない・容姿に自信がない・始め方がわからない',
+    themes: '脳科学・容姿不要・初配信実績・日本人女性の海外評価'
+  },
+  kasege: {
+    label: '配信中だが稼げない人',
+    pains: 'お気に入りは増えるのに稼げない・待機地獄・常連がつかない・コイン設計がわからない',
+    themes: '太客・常連製造・コイン設計・Kingシステム・ラブンス'
+  },
+  fuku: {
+    label: '副業志望（会社員・学生）',
+    pains: 'バレずに副業したい・時間がない・初期費用をかけたくない・本業とどう両立するか',
+    themes: '身バレ・AI加工・物価高・スキマ時間・初期費用なし'
+  }
+};
+
+const CHATRESKA_THEME_MAP = {
+  s1: 'コイン設計の思想・ゴール設定・チップメニュー3層設計・Kingシステム',
+  s2: '配信中の接客テクニック・焦らし・名前を呼ぶ・リアクション・パブリックの正しい使い方',
+  s3: '常連・太客製造マニュアル・アフターメール・特別感の演出・距離感の保ち方',
+  s4: '脳科学・心理学5大テクニック（間欠強化・ツァイガルニク・ベン・フランクリン・オキシトシン・ギャップ萌え）',
+  s5: 'たぬかな戦略（上級）・飴と鞭・精神的教祖ポジション・弱点をネタに変える',
+  s6: '身バレゼロの完全対策（顔バレ・名前・録画・会社バレ対策）',
+  s7: '確定申告・税金の実践知識・経費一覧・白色/青色申告・職業欄',
+  s8: '初配信で最大結果を出す準備・成功した子の共通点・具体的実績',
+  s9: '稼ぎを最大化する時間帯戦略・3時間コンテスト・朝の戦略',
+  s10: 'ターゲット別強みの活かし方（主婦・夜職・30〜40代・未経験）',
+  s11: '事務所選びの完全チェックリスト（風営法・報酬率・ノルマ・口コミ）',
+  s13: '今が一番稼ぎやすい時代の3根拠・投げ銭文化・円安ボーナス',
+  s14: '向いている人・向いていない人の完全リスト',
+  s15: '月100万達成の現実的ロードマップ・稼働時間別収入目安・具体実例',
+  s16: 'ラブンス（Lovense）完全活用法・3稼ぎパターン・導入タイミング',
+  s17: '海外プラットフォームへの誤解解体・国内との比較・英語不要の根拠',
+  s22: '確定申告の扶養問題攻略・48万円ラインの理解・攻め方の設計'
+};
+
+const CHATRESKA_PATTERN_MAP = {
+  p1: `【悩み否定型】\n冒頭（200字）：読者の悩み・勘違いをズバリ提示\n「それは違う」否定（400字）：理由を脳科学・数字・実例で説明\n真実の解説（${Math.round}字）：正しいやり方を体験談と数字で\n実例紹介（400字）：具体的な人物実例（年齢・稼働・月収）\n行動促進（200字）：「本気で〜したい人、LINEで相談乗るよ」`,
+  p2: `【細分化解説型】\n冒頭（200字）：「〇〇が稼げない人が見落としてる〇つのこと」\n各項目解説（各450字）：体験談・数字・対比フレームで\nまとめ（200字）：「全部一人ではキツい」→行動促進`,
+  p3: `【比較型】\n冒頭（200字）：比較テーマ提示\n比較表（400字）：項目ごとの対比（国内 vs 海外 / 夜職 vs チャトレ等）\n実例紹介（400字）：それぞれの実例\n結論（300字）：「どちらが向いているかはあなた次第。話だけでも」`,
+  p4: `【ノウハウ開示→誘導型】\n冒頭（200字）：「惜しみなく全部書きます」宣言\nノウハウ開示（wc×0.65字）：SKILL知識を具体的・実践的に書き切る（信頼構築）\n「でも一番大事な部分は…」（200字）：サポートの個別性を強調\n行動促進（200字）：「本気の人はLINEで」`
+};
+
+function isChaTreskaAc(ac) {
+  return ac && (ac.harm === 'C' || /チャトレ|ストチャ|chatreska/i.test(ac.genre||''));
+}
+
+async function generateChaTreskaNote(item, ac, wc) {
+  const c = ac.character;
+  const p = ac.persona;
+  const isPaid = item.type === 'paid';
+  const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
+  const priceVal = PRICE_MAP[item.priceKey] || 9800;
+
+  // チャトレ固有パラメータ取得
+  const readerKey = document.getElementById('chatreska-reader')?.value || 'auto';
+  const themeKey  = document.getElementById('chatreska-theme')?.value || 'auto';
+  const patternKey = document.getElementById('chatreska-pattern')?.value || 'auto';
+
+  const readerInfo = readerKey !== 'auto' ? CHATRESKA_READER_MAP[readerKey] : null;
+  const themeInfo  = themeKey  !== 'auto' ? CHATRESKA_THEME_MAP[themeKey]   : null;
+  const patternInfo = patternKey !== 'auto' ? CHATRESKA_PATTERN_MAP[patternKey] : null;
+
+  const systemPrompt = `あなたは今から完全に「${c.name}」（${c.age}歳）という人物になりきってnoteの記事を書きます。
+
+プロフィール: ${c.background}
+一人称: ${c.first_person}
+文体: ${c.tone}
+口癖（自然に散りばめる）: ${c.phrases?.join('、')||''}
+絶対禁止: ${c.forbidden||'箇条書き記号・HTMLタグ・根拠のない断言'}
+
+文章サンプル（この文体を完全に真似る）:
+${c.samples?.join('\n')||''}
+
+このnoteはチャトレ・ストリームメイト（ストチャ）に関するnote記事です。
+以下の専門ノウハウデータを完全に理解・活用して執筆してください。
+
+${CHATRESKA_KNOWLEDGE}`;
+
+  const readerSection = readerInfo
+    ? `読者層: ${readerInfo.label}\n読者の刺さる悩み: ${readerInfo.pains}\n有効なテーマ: ${readerInfo.themes}`
+    : `読者層: 自動判断（主婦・夜職・未経験・副業志望から最適な層を選ぶ）`;
+
+  const themeSection = themeInfo
+    ? `記事テーマ: ${themeInfo}`
+    : `記事テーマ: 上記ノウハウの中からターゲット読者に最も刺さるテーマを1つ選ぶ（被らないよう工夫する）`;
+
+  const structureSection = patternInfo
+    ? `記事構成パターン:\n${patternInfo.replace('${Math.round}字', `${Math.round(wc*0.5)}字`)}`
+    : `記事構成パターン: 以下から読者層とテーマに最適なものを選ぶ\n${Object.entries(CHATRESKA_PATTERN_MAP).map(([k,v])=>v.split('\n')[0]).join(' / ')}`;
+
+  const userPrompt = `以下の条件でチャトレ・ストチャに関するnoteを書いてください。
+
+${readerSection}
+${themeSection}
+
+読者の具体的な悩み: ${item.problem||readerInfo?.pains||'稼ぎ方がわからない'}
+伝えたいメッセージ: ${item.message||'正しいやり方さえ知れば誰でも稼げる'}
+${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルは読者の悩みに直撃するものをAIが考える（例：「主婦がパートをやめた理由」「身バレゼロで月30万」）'}
+
+${structureSection}
+
+【執筆の絶対ルール】
+- 上記SKILL 1〜23の知識を具体的な数字・実例とともに自然に組み込む
+- 著者フレーズ（「ぶっちゃけ」「才能じゃない。やり方の問題だから。」等）を自然に散りばめる
+- 実例は必ず具体的（年齢・属性・稼働日数・月収）を入れる
+- 数字は必ず入れる（初配信82,460円、10,000コイン≒75,000円等）
+- 「怖い」「不安」という読者の感情に必ず共感してから解決策を出す
+- 丸パクリ禁止：知識はエッセンスとして自分の言葉に変換する
+- 記号（・▶→★◆）は絶対使わない。絵文字も使わない
+
+【文字数の絶対ルール】
+指定文字数: ${wc}字（これは最低文字数。必ず超えること）
+
+${isPaid?`有料note（¥${priceVal.toLocaleString()}）です。この価格に見合う十分な価値・情報量を持たせてください。`:`最後に「相談・問い合わせ先」への自然な誘導文を入れてください。${ac.note_url?'URL: '+ac.note_url:''}`}
+
+${item.genThreads||item.genX?`
+【SNS投稿文も一緒に作成】
+${item.genThreads?'Threads用投稿文: このnoteを宣伝する200〜300字の投稿（絵文字2〜3個、ハッシュタグ2〜3個）':''}
+${item.genX?'X用投稿文: このnoteを宣伝する140字以内のツイート（簡潔でインパクト重視）':''}`:''
+}
+
+JSON形式のみで返してください（コードブロックなし、説明文なし）:
+{
+  "title": "noteタイトル",
+  "body": "note本文全体（改行は\\nで表現、記号なし、クリーンテキスト）",
+  "description": "概要文160字",
+  "tags": ["タグ1","タグ2","タグ3","タグ4","タグ5"],
+  "threads_post": "${item.genThreads?'Threads投稿文':''}",
+  "x_post": "${item.genX?'X投稿文':''}",
+  "thumbnail_prompts": [
+    "カバー画像の英語プロンプト（16:9、プロ品質）",
+    "本文挿絵の英語プロンプト",
+    "まとめ画像の英語プロンプト"
+  ]
+}`;
+
+  const raw = await callClaude(systemPrompt, userPrompt, 9000);
+  const m = raw.match(/\{[\s\S]*\}/);
+  return JSON.parse(m ? m[0] : raw);
+}
+
 async function generateSingleNote(item) {
   item.status='running';
   renderQueueList();
@@ -1360,16 +1699,46 @@ async function generateSingleNote(item) {
   const c = ac.character;
   const p = ac.persona;
   const isPaid = item.type==='paid';
-  // 価格帯の解決
   const PRICE_MAP = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
   const priceVal = PRICE_MAP[item.priceKey] || 9800;
   const prod = {title:'有料note',price:priceVal,url:ac.note_url||''};
-
   const wc = parseInt(item.words) || 3500;
 
-  // ━━ セールスレター＋有料記事モード ━━
+  // ━━ セールスレターモード ━━
   if (item.style === 'sales') {
     return await generateSalesNote(item, ac, wc);
+  }
+
+  // ━━ チャトレ特化モード（SKILL 1〜23 内蔵）━━
+  if (isChaTreskaAc(ac)) {
+    try {
+      const data = await generateChaTreskaNote(item, ac, wc);
+      const newTitle = data.title||'タイトル未設定';
+      GENERATED_TITLES.push(newTitle);
+      if(GENERATED_TITLES.length > 200) GENERATED_TITLES.shift();
+      localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+      item.title = newTitle;
+      item.body = (data.body||'').replace(/\\n/g,'\n');
+      item.description = data.description||'';
+      item.tags = data.tags||[];
+      item.threadsPost = data.threads_post||'';
+      item.xPost = data.x_post||'';
+      item.thumbPrompts = data.thumbnail_prompts||[];
+      item.status = 'done';
+      item.genTime = new Date().toLocaleTimeString('ja-JP');
+      item.mode = 'chatreska'; // チャトレ生成フラグ
+      await genThumbs(item);
+      updateDraftNoteSelect();
+    } catch(e) {
+      item.status='error'; item.error=e.message;
+      console.error(e);
+    }
+    saveQueue();
+    renderQueueList();
+    document.getElementById('b-create').textContent=queue.filter(q=>q.status==='done').length;
+    renderHistory();
+    if(item.status==='done'&&queue.filter(q=>q.status==='done').length===1) showNoteViewer(item);
+    return;
   }
 
   const structures = {
