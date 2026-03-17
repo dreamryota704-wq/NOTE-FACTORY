@@ -1446,6 +1446,7 @@ function loadPersonaList() {
 }
 function savePersonaList() {
   localStorage.setItem('nf_persona_list', JSON.stringify(_personaList));
+  triggerGistSync();
 }
 
 // 生成完了後に自動保存
@@ -2643,6 +2644,7 @@ async function saveNoteAuth() {
   NOTE_AUTH[acId]={email,password:pw,saved:new Date().toISOString()};
   localStorage.setItem('nf_auth',JSON.stringify(NOTE_AUTH));
   renderConnectList();
+  triggerGistSync(); // クラウド同期
   toast('💾 認証情報保存',`${ACCOUNTS.find(a=>a.id===acId)?.name} の認証情報を保存しました`);
 
   // 接続テスト（サーバー経由）
@@ -4129,6 +4131,7 @@ function saveApiSettings() {
   }
   renderSecretsCheck();
   document.getElementById('api-settings-ov')?.remove();
+  triggerGistSync(); // APIキーもクラウドに同期
   toast('✅ APIキー保存完了', 'Claude & Gemini APIキーを保存しました');
 }
 
@@ -5062,6 +5065,8 @@ function saveQueue() {
   }
   // Supabaseにもキューを同期
   _pushQueueToCloud();
+  // GitHub Gist同期（生成完了したアイテムがある時だけ）
+  if (queue.some(q => q.status === 'done')) triggerGistSync();
 }
 
 async function _pushQueueToCloud() {
@@ -5111,6 +5116,8 @@ function saveAccountsLocal() {
       await _pushToCloud();
     }
   }, 1500);
+  // GitHub Gist同期
+  triggerGistSync();
 }
 
 // クラウドへ実際にプッシュ（内部用）
@@ -5302,21 +5309,34 @@ document.addEventListener('DOMContentLoaded', () => {
   syncBadge.className = 'sync-badge';
   syncBadge.innerHTML = '☁️ 同期待機中';
   syncBadge.style.cursor = 'pointer';
-  syncBadge.title = 'クリックでSupabase設定';
+  syncBadge.title = 'クリックでクラウド同期設定';
   syncBadge.onclick = () => openSbConfig();
   if(hspace) header.insertBefore(syncBadge, hspace.nextSibling);
 
-  // ページロード時にSupabase設定を復元して即時同期開始
-  const savedUrl = localStorage.getItem('nf_sb_url');
-  const savedKey = localStorage.getItem('nf_sb_key');
-  if(savedUrl && savedKey) {
-    window.SUPABASE_URL_RUN = savedUrl;
-    window.SUPABASE_ANON_KEY_RUN = savedKey;
-    // 少し遅らせてinit実行
-    setTimeout(() => initSupabase(), 300);
+  // ── GitHub Gist 優先で起動時同期 ──
+  const githubPat = localStorage.getItem('nf_github_pat');
+  if (githubPat) {
+    // 少し遅らせてDOMが安定してから
+    setTimeout(() => loadFromGist(false), 800);
   } else {
-    setSyncBadge('local', '💾 ローカル保存中（タップして同期設定）');
+    // Supabase fallback
+    const savedUrl = localStorage.getItem('nf_sb_url');
+    const savedKey = localStorage.getItem('nf_sb_key');
+    if(savedUrl && savedKey) {
+      window.SUPABASE_URL_RUN = savedUrl;
+      window.SUPABASE_ANON_KEY_RUN = savedKey;
+      setTimeout(() => initSupabase(), 300);
+    } else {
+      setSyncBadge('local', '💾 ローカル保存中（☁️タップで同期設定）');
+    }
   }
+
+  // 5分ごとに自動でクラウドから最新を取得
+  setInterval(() => {
+    if (localStorage.getItem('nf_github_pat')) {
+      loadFromGist(false);
+    }
+  }, 5 * 60 * 1000);
 });
 
 function setSyncBadge(type, msg) {
@@ -5326,57 +5346,57 @@ function setSyncBadge(type, msg) {
   el.className = 'sync-badge' + (type === 'syncing' ? ' syncing' : type === 'error' ? ' error' : '');
 }
 
-// ─── Supabase設定ポップアップ（シンプル版）─────────────────────
+// ─── GitHub Gist クラウド同期設定ポップアップ ─────────────────────
 function openSbConfig() {
-  const savedUrl = localStorage.getItem('nf_sb_url') || '';
-  const savedKey = localStorage.getItem('nf_sb_key') || '';
-  const userId = localStorage.getItem('nf_user_id') || '未設定';
+  const savedPat = localStorage.getItem('nf_github_pat') || '';
+  const gistId   = localStorage.getItem('nf_gist_id') || '';
+  const lastSync = localStorage.getItem('nf_gist_last_sync') || '未同期';
 
   const ov = document.createElement('div');
+  ov.id = 'gist-config-ov';
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,30,18,.75);z-index:400;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px)';
   ov.innerHTML = `
     <div style="background:#fff;border-radius:12px;width:520px;max-width:94vw;border:1px solid rgba(0,168,120,.2);box-shadow:0 20px 60px rgba(0,80,40,.2);overflow:hidden">
-      <div style="height:3px;background:linear-gradient(90deg,var(--em3),var(--em2))"></div>
+      <div style="height:3px;background:linear-gradient(90deg,#2563eb,#3b82f6)"></div>
       <div style="padding:20px 24px 14px;border-bottom:1px solid var(--ink4);display:flex;align-items:center;justify-content:space-between">
-        <div style="font-family:var(--fs);font-size:16px;font-weight:800;color:#0d1a12">☁️ クロスデバイス同期 設定</div>
-        <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:1px solid var(--ink5);color:#5a7f68;width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px">×</button>
+        <div style="font-family:var(--fs);font-size:16px;font-weight:800;color:#0d1a12">☁️ クラウド同期設定（どのPCでも同じデータ）</div>
+        <button onclick="document.getElementById('gist-config-ov').remove()" style="background:none;border:1px solid var(--ink5);color:#5a7f68;width:28px;height:28px;border-radius:4px;cursor:pointer;font-size:14px">×</button>
       </div>
       <div style="padding:20px 24px">
-        <div style="background:#e8f8f0;border:1px solid rgba(0,168,120,.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;font-weight:700;color:#1c2e22;line-height:1.8">
-          📱 スマホ・PC・タブレット間でアカウントデータを自動同期します。<br>
-          <span style="color:var(--em3)">supabase.com</span> で無料プロジェクトを作成してください（5分）
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:11px;font-weight:700;color:#1e3a5f;line-height:1.8">
+          📱 GitHubアカウントがあればOK！設定するだけでPC・スマホ・どのデバイスからでも同じデータが使えます。<br>
+          ① <a href="https://github.com/settings/tokens/new?scopes=gist" target="_blank" style="color:#2563eb">github.com/settings/tokens</a> を開く<br>
+          ② 「Expiration: No expiration」「Scopes: ✅ gist」で生成<br>
+          ③ 下にトークンを貼り付けて「同期開始」
         </div>
-        <div style="margin-bottom:12px">
-          <label style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.15em;display:block;margin-bottom:5px">SUPABASE URL</label>
-          <input id="sb-url-inp" type="url" style="width:100%;padding:9px 12px;background:#f8fdfb;border:1px solid var(--ink5);border-radius:6px;font-size:12px;font-weight:600;color:#0d1a12;outline:none" placeholder="https://xxxxxxxx.supabase.co" value="${savedUrl}" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--ink5)'">
+        <div style="margin-bottom:16px">
+          <label style="font-size:10px;font-weight:800;color:#2563eb;letter-spacing:.15em;display:block;margin-bottom:5px">GITHUB PERSONAL ACCESS TOKEN（gistスコープ）</label>
+          <input id="gh-pat-inp" type="password" style="width:100%;padding:10px 12px;background:#f8fdfb;border:2px solid #bfdbfe;border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" value="${savedPat}" onfocus="this.style.borderColor='#2563eb'" onblur="this.style.borderColor='#bfdbfe'">
+          <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">このトークンはブラウザのlocalStorageのみに保存されます</div>
         </div>
-        <div style="margin-bottom:14px">
-          <label style="font-size:10px;font-weight:800;color:var(--em3);letter-spacing:.15em;display:block;margin-bottom:5px">SUPABASE ANON KEY</label>
-          <input id="sb-key-inp" type="password" style="width:100%;padding:9px 12px;background:#f8fdfb;border:1px solid var(--ink5);border-radius:6px;font-size:12px;font-weight:600;color:#0d1a12;outline:none" placeholder="eyJhbGciOiJIUzI1NiIs..." value="${savedKey}" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--ink5)'">
-        </div>
-        <div style="font-size:10px;color:#5a7f68;font-weight:600;margin-bottom:14px">🔑 デバイスID: <code style="font-size:9px">${userId}</code>（同じIDで全デバイスが同期されます）</div>
-        <button onclick="saveSbConfig()" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--em),var(--em3));color:#fff;border:none;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer">☁️ 保存して同期開始</button>
-        <div style="margin-top:10px;text-align:center">
-          <button onclick="showSbSQL()" style="background:none;border:none;color:var(--em3);font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline">📋 必要なSQLをコピー（テーブル作成）</button>
-        </div>
+        ${gistId ? `<div style="font-size:10px;color:var(--em3);font-weight:700;margin-bottom:12px">✅ Gist ID: <code style="font-size:9px">${gistId}</code>　最終同期: ${lastSync}</div>` : '<div style="font-size:10px;color:#5a7f68;font-weight:600;margin-bottom:12px">💡 初回起動時に自動でプライベートGistを作成します</div>'}
+        <button onclick="saveGistConfig()" style="width:100%;padding:13px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;border:none;border-radius:6px;font-weight:800;font-size:13px;cursor:pointer">☁️ 保存して同期開始</button>
+        ${gistId ? `<div style="margin-top:10px;display:flex;gap:8px">
+          <button onclick="loadFromGist(true)" style="flex:1;padding:10px;background:#f0fdf4;border:1px solid var(--em4);border-radius:6px;font-weight:800;font-size:11px;cursor:pointer;color:var(--em3)">⬇️ クラウドから読み込む</button>
+          <button onclick="syncToGist(true)" style="flex:1;padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-weight:800;font-size:11px;cursor:pointer;color:#2563eb">⬆️ クラウドに保存する</button>
+        </div>` : ''}
       </div>
     </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
 }
 
-function saveSbConfig() {
-  const url = document.getElementById('sb-url-inp')?.value?.trim();
-  const key = document.getElementById('sb-key-inp')?.value?.trim();
-  if(!url || !key) { toast('⚠️', 'URLとKeyの両方を入力してください'); return; }
-  localStorage.setItem('nf_sb_url', url);
-  localStorage.setItem('nf_sb_key', key);
-  window.SUPABASE_URL_RUN = url;
-  window.SUPABASE_ANON_KEY_RUN = key;
-  document.querySelector('[style*="fixed"][style*="400"]')?.remove();
-  toast('☁️ 設定完了', 'Supabase同期を開始します...');
-  initSupabase();
+function saveGistConfig() {
+  const pat = document.getElementById('gh-pat-inp')?.value?.trim();
+  if (!pat) { toast('⚠️', 'GitHubトークンを入力してください'); return; }
+  localStorage.setItem('nf_github_pat', pat);
+  document.getElementById('gist-config-ov')?.remove();
+  toast('☁️ 同期開始', 'GitHubと同期します...');
+  loadFromGist(true);
 }
+
+// 互換用（旧Supabase設定の呼び出しが残っている場合）
+function saveSbConfig() { saveGistConfig(); }
 
 function showSbSQL() {
   const sql = `-- NOTE FACTORY v9 テーブル作成SQL
@@ -5407,7 +5427,166 @@ CREATE POLICY "open_queue" ON nf_queue FOR ALL USING (true);`;
   navigator.clipboard.writeText(sql).then(()=>toast('📋 SQLコピー', 'Supabase SQL Editorに貼り付けて実行してください'));
 }
 
-// ─── クラウドからデータ読み込み ───────────────
+// ════════════════════════════════════════════════════════
+// ── GitHub Gist クラウド同期エンジン ──────────────────
+// ════════════════════════════════════════════════════════
+const _GIST_FILENAME = 'note-factory-v10-data.json';
+const _GIST_DESC     = 'NOTE FACTORY v10 - auto sync data';
+let   _gistSyncTimer = null;
+
+// プライベートGistを検索または新規作成
+async function _findOrCreateGist(pat) {
+  const headers = { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  // 既存Gist検索（最大100件）
+  const listRes = await fetch('https://api.github.com/gists?per_page=100', { headers });
+  if (!listRes.ok) throw new Error(`GitHub API ${listRes.status}: トークンが無効です`);
+  const gists = await listRes.json();
+  const found = gists.find(g => g.description === _GIST_DESC && g.files[_GIST_FILENAME]);
+  if (found) {
+    localStorage.setItem('nf_gist_id', found.id);
+    return found.id;
+  }
+  // 新規作成（プライベート）
+  const createRes = await fetch('https://api.github.com/gists', {
+    method: 'POST', headers: {...headers, 'Content-Type': 'application/json'},
+    body: JSON.stringify({ description: _GIST_DESC, public: false, files: { [_GIST_FILENAME]: { content: '{"_v":10}' } } })
+  });
+  if (!createRes.ok) throw new Error(`Gist作成失敗 ${createRes.status}`);
+  const newGist = await createRes.json();
+  localStorage.setItem('nf_gist_id', newGist.id);
+  return newGist.id;
+}
+
+// クラウドへ保存（デバウンス付き）
+async function syncToGist(manual = false) {
+  const pat = localStorage.getItem('nf_github_pat') || '';
+  if (!pat) return;
+  try {
+    setSyncBadge('syncing', '⟳ 同期中...');
+    let gistId = localStorage.getItem('nf_gist_id') || '';
+    if (!gistId) gistId = await _findOrCreateGist(pat);
+
+    const syncData = {
+      _v: 10, _savedAt: new Date().toISOString(),
+      nf_accounts:     localStorage.getItem('nf_accounts')     || '[]',
+      nf_persona_list: localStorage.getItem('nf_persona_list') || '[]',
+      nf_auth:         localStorage.getItem('nf_auth')         || '{}',
+      nf_gen_titles:   localStorage.getItem('nf_gen_titles')   || '[]',
+      nf_daily_ac_mode:localStorage.getItem('nf_daily_ac_mode')|| 'rotate',
+      nf_api_key:      localStorage.getItem('nf_api_key')      || '',
+      nf_gemini_key:   localStorage.getItem('nf_gemini_key')   || '',
+      nf_queue_slim:   JSON.stringify((queue||[]).slice(-50).map(q=>({...q, body:(q.body||'').substring(0,3000), thumbs:undefined})))
+    };
+
+    const headers = { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' };
+    const patchRes = await fetch(`https://api.github.com/gists/${gistId}`, {
+      method: 'PATCH', headers,
+      body: JSON.stringify({ files: { [_GIST_FILENAME]: { content: JSON.stringify(syncData, null, 2) } } })
+    });
+    if (!patchRes.ok) {
+      if (patchRes.status === 404) { localStorage.removeItem('nf_gist_id'); return syncToGist(manual); }
+      throw new Error(`Gist更新失敗 ${patchRes.status}`);
+    }
+    const now = new Date().toLocaleString('ja-JP', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem('nf_gist_last_sync', now);
+    setSyncBadge('', `☁️ ${now} 同期済`);
+    if (manual) toast('☁️ 保存完了', 'クラウドに同期しました！');
+  } catch(e) {
+    setSyncBadge('error', '❌ 同期失敗');
+    console.warn('Gist sync error:', e);
+    if (manual) toast('❌ 同期失敗', e.message);
+  }
+}
+
+// デバウンス付きトリガー（1.5秒後に1回だけ）
+function triggerGistSync() {
+  clearTimeout(_gistSyncTimer);
+  _gistSyncTimer = setTimeout(() => syncToGist(), 1500);
+}
+
+// クラウドから読み込み
+async function loadFromGist(manual = false) {
+  const pat = localStorage.getItem('nf_github_pat') || '';
+  if (!pat) {
+    setSyncBadge('local', '💾 ローカル保存中（☁️をタップして同期設定）');
+    return false;
+  }
+  try {
+    setSyncBadge('syncing', '⟳ データ取得中...');
+    let gistId = localStorage.getItem('nf_gist_id') || '';
+    if (!gistId) gistId = await _findOrCreateGist(pat);
+
+    const headers = { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+    const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers });
+    if (!res.ok) {
+      if (res.status === 404) { localStorage.removeItem('nf_gist_id'); return loadFromGist(manual); }
+      throw new Error(`Gist取得失敗 ${res.status}`);
+    }
+    const gist = await res.json();
+    const content = gist.files[_GIST_FILENAME]?.content;
+    if (!content) return false;
+    const data = JSON.parse(content);
+    if (!data._v) return false;
+
+    // ローカルにマージ保存（クラウドが新しければ上書き）
+    const SYNC_KEYS = ['nf_accounts','nf_persona_list','nf_auth','nf_gen_titles','nf_daily_ac_mode','nf_api_key','nf_gemini_key'];
+    let changed = false;
+    SYNC_KEYS.forEach(k => {
+      if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
+        const local = localStorage.getItem(k);
+        // クラウドが異なれば上書き（初回は必ず適用）
+        if (local !== data[k]) {
+          localStorage.setItem(k, data[k]);
+          changed = true;
+        }
+      }
+    });
+
+    // キューをマージ（クラウドにあってローカルにないものを追加）
+    if (data.nf_queue_slim) {
+      try {
+        const cloudQ = JSON.parse(data.nf_queue_slim);
+        const localIds = new Set((queue||[]).map(q=>q.id));
+        const newItems = cloudQ.filter(q => !localIds.has(q.id) && q.status === 'done');
+        if (newItems.length > 0) {
+          queue = [...newItems, ...(queue||[])];
+          localStorage.setItem('nf_queue', JSON.stringify(queue));
+          changed = true;
+        }
+      } catch(_) {}
+    }
+
+    if (changed) {
+      // メモリ変数を再同期
+      try { ACCOUNTS = JSON.parse(localStorage.getItem('nf_accounts') || '[]'); } catch(_) {}
+      try { NOTE_AUTH = JSON.parse(localStorage.getItem('nf_auth') || '{}'); } catch(_) {}
+      try { GENERATED_TITLES = JSON.parse(localStorage.getItem('nf_gen_titles') || '[]'); } catch(_) {}
+      const apiK = localStorage.getItem('nf_api_key'); if (apiK) window.ANTHROPIC_API_KEY = apiK;
+      const gmiK = localStorage.getItem('nf_gemini_key'); if (gmiK) window.GEMINI_API_KEY = gmiK;
+      // UI全体更新
+      try { renderAccounts(); } catch(_) {}
+      try { populateSelects(); } catch(_) {}
+      try { renderQueueList(); } catch(_) {}
+      try { renderHistory(); } catch(_) {}
+      try { renderConnectList(); } catch(_) {}
+      if (manual) toast('☁️ 同期完了！', `クラウドから${data._savedAt ? new Date(data._savedAt).toLocaleString('ja-JP') : ''}のデータを読み込みました`);
+    } else {
+      if (manual) toast('✅ 最新状態', 'ローカルとクラウドは同じです');
+    }
+
+    const now = new Date().toLocaleString('ja-JP', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+    localStorage.setItem('nf_gist_last_sync', now);
+    setSyncBadge('', `☁️ ${now} 同期済`);
+    return true;
+  } catch(e) {
+    setSyncBadge('error', '❌ 読み込み失敗（トークンを確認）');
+    console.warn('Gist load error:', e);
+    if (manual) toast('❌ 読み込み失敗', e.message);
+    return false;
+  }
+}
+
+// ─── クラウドからデータ読み込み（Supabase互換）───────────────
 async function syncFromCloud() {
   if (!sbReady || !sb) return;
   try {
