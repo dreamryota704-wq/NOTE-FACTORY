@@ -297,7 +297,8 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
   <div class="ver">v10.0</div>
   <div class="hspace"></div>
   <div class="hchip auto"><div class="dot"></div>自律稼働中</div>
-  <button class="btn b-o b-sm" onclick="openApiSettings()" style="margin-left:8px" title="Claude/Gemini APIキー設定">⚙️ API設定</button>
+  <button class="btn b-o b-sm" onclick="openApiSettings()" style="margin-left:8px" title="Claude/Gemini APIキー設定 / 設定バックアップ">⚙️ API設定</button>
+  <button class="btn b-o b-sm" onclick="exportAllSettings()" style="margin-left:4px;font-size:9px" title="設定をJSONでバックアップ（別PCへ移行時に使用）">📤 バックアップ</button>
   <button class="btn b-r b-sm" onclick="openM('addAc')" style="margin-left:4px;background:linear-gradient(135deg,var(--em2),var(--em));border-color:var(--em3)">＋ アカウント追加</button>
   <button class="btn b-r b-sm" onclick="sw('daily')" style="margin-left:4px">⚡ 今日の5本生成</button>
 </header>
@@ -1197,7 +1198,8 @@ async function pollServerHealth() {
     }
   } catch(e) {
     serverOnline = false;
-    updateServerBadge(false);
+    // サーバー未起動時は完全サイレント（エラー表示なし）
+    console.info('Local server not running (normal for GitHub Pages usage)');
   }
 }
 function updateServerBadge(online) {
@@ -2904,6 +2906,11 @@ ${THREADS_KNOWLEDGE_BASE}`;
 読者の悩み: ${item.problem||p.pains?.[0]||'Threadsで稼ぎたいが何から始めればいいか分からない'}
 メッセージ: ${item.message||p.desires?.[0]||'挫折しにくい方法で誰でも再現できる'}
 ${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルは「できそう感×数字×ギャップ」の公式で作ること（例：「寝ながら○万」「○日で○万」）'}
+${item.uploadText?`
+【📎 リライト元コンテンツ（80点→120点化）】
+以下のコンテンツを完全分析し、エッセンスだけを抽出して寝稼ぎ式Pro構成に昇華させること。丸パクリ厳禁。良い部分は活かしつつ、足りない要素（脳科学・数字・感情導線・キラーフレーズ）を全部追加して120点のnoteに生まれ変わらせる。
+元コンテンツ:
+${item.uploadText.substring(0,5000)}`:''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 【無料公開エリア：セールスレター 7つの心理装置】
@@ -3222,6 +3229,11 @@ async function generateLoveNote(item, ac) {
 【文字数】${item.words||12000}字以上を必ず達成すること。少なくとも12,000字は書くこと。`;
 
   const userPrompt = `以下の【愛太郎式恋愛・復縁コンテンツ黄金フレームワーク】に完全に従って、${item.words||12000}字以上のnoteを執筆してください。
+${item.uploadText?`
+【📎 リライト元コンテンツ（80点→120点化）】
+以下のコンテンツを完全分析し、エッセンスだけを抽出して愛太郎式黄金フレームワーク構成に昇華させること。丸パクリ厳禁。良い部分は活かしつつ、足りない要素（感情温度・キラーフレーズ・緊急性・男性心理・外伝テンプレ）を全部追加して120点のnoteに生まれ変わらせる。
+元コンテンツ:
+${item.uploadText.substring(0,5000)}`:''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ■ PART A：セールスレター（14ステップ黄金構成）
@@ -3546,6 +3558,11 @@ async function generatePonyoNote(item, ac) {
 読者の悩み: ${item.problem||p.pains?.[0]||'SNSで稼ぎたいが何から始めればいいか分からない'}
 伝えたいメッセージ: ${item.message||p.desires?.[0]||'正しい方法で行動すれば誰でも稼げる'}
 ${item.titleHint?`タイトル案: ${item.titleHint}`:'タイトルは①のフック公式で最適なものを考えてください'}
+${item.uploadText?`
+【📎 リライト元コンテンツ（80点→120点化）】
+以下のコンテンツを完全分析し、エッセンスだけを抽出してぽにょ式黄金フレームワーク構成に昇華させること。丸パクリ厳禁。良い部分は活かしつつ、足りない要素（感情導線・ぽにょ式7タイプ・実績数字・社会的証明）を全部追加して120点のnoteに生まれ変わらせる。
+元コンテンツ:
+${item.uploadText.substring(0,5000)}`:''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━
 【無料公開エリア：セールスレター10ステップ】
@@ -3951,7 +3968,7 @@ async function autoSaveDraft(item) {
   const queueEl = document.getElementById(`hc-${item.id}`);
   const acName = ACCOUNTS.find(a=>a.id===item.acId)?.name || item.acId;
   console.log(`下書き保存: アカウント=${acName} (${auth.email})`);
-  toast('📝 自動下書き保存中...', `「${item.title?.substring(0,20)}」→ ${acName} (${auth.email?.split('@')[0]})に送信中`);
+  // toast は保存成功時のみ表示（開始時は表示しない）
 
   try {
     const res = await fetch('http://localhost:3001/api/draft-save', {
@@ -3980,19 +3997,8 @@ async function autoSaveDraft(item) {
       }
     }
   } catch(e) {
-    // サーバー未起動 → リトライキューに追加して後で自動送信
-    console.info('Auto draft: server not running, queuing for retry:', e.message);
-    const already = DRAFT_RETRY_QUEUE.find(d => d.itemId === item.id);
-    if (!already) {
-      DRAFT_RETRY_QUEUE.push({
-        itemId: item.id,
-        acId: item.acId,
-        queuedAt: new Date().toISOString()
-      });
-      saveDraftRetryQueue();
-      updateServerBadge(false);
-      toast('📥 保存キューに追加', `サーバー起動後に自動送信します（${DRAFT_RETRY_QUEUE.length}件待機中）`);
-    }
+    // サーバー未起動 → 完全にサイレントスキップ（エラー表示しない）
+    console.info('Auto draft: server not running, skipping silently:', e.message);
   }
 }
 
@@ -4086,6 +4092,19 @@ function openApiSettings() {
           ⚠️ APIキーはブラウザのlocalStorageにのみ保存されます。外部には送信しません。
         </div>
         <div id="api-test-result" style="margin-bottom:12px"></div>
+
+        <div style="border-top:1px solid var(--ink4);padding-top:16px;margin-top:4px">
+          <div style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;font-family:var(--fm);margin-bottom:8px">🔄 どのPCでも使う — 設定エクスポート / インポート</div>
+          <div style="font-size:10px;color:#5a7f68;font-weight:600;margin-bottom:10px;line-height:1.5">APIキー・アカウント設定・キャラ情報をJSONでバックアップ。別のPCに移行するときはインポートするだけ。</div>
+          <div style="display:flex;gap:8px">
+            <button onclick="exportAllSettings()" class="btn b-o b-sm" style="flex:1;font-weight:800">📤 設定をエクスポート（JSON）</button>
+            <label class="btn b-o b-sm" style="flex:1;font-weight:800;cursor:pointer;text-align:center">
+              📥 設定をインポート
+              <input type="file" accept=".json" onchange="importAllSettings(this)" style="display:none">
+            </label>
+          </div>
+        </div>
+
       </div>
       <div style="padding:12px 24px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--ink4)">
         <button onclick="document.getElementById('api-settings-ov').remove()" class="btn b-o b-sm">キャンセル</button>
@@ -4111,6 +4130,64 @@ function saveApiSettings() {
   renderSecretsCheck();
   document.getElementById('api-settings-ov')?.remove();
   toast('✅ APIキー保存完了', 'Claude & Gemini APIキーを保存しました');
+}
+
+// ── 設定エクスポート（全localStorage → JSON ダウンロード）
+function exportAllSettings() {
+  const exportKeys = [
+    'nf_api_key', 'nf_gemini_key',
+    'nf_accounts', 'nf_note_auth',
+    'nf_gen_titles', 'nf_daily_ac_mode',
+    'nf_daily_ac_fixed', 'nf_batch_count',
+    'nf_queue', 'nf_history'
+  ];
+  const data = {};
+  exportKeys.forEach(k => {
+    const v = localStorage.getItem(k);
+    if (v !== null) data[k] = v;
+  });
+  // queue と history は容量が大きいので含めるが警告
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `note-factory-settings-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('📤 エクスポート完了', '設定JSONをダウンロードしました。別PCではインポートボタンで読み込んでください');
+}
+
+// ── 設定インポート（JSON → localStorage 復元）
+function importAllSettings(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      Object.entries(data).forEach(([k, v]) => {
+        if (typeof v === 'string') {
+          localStorage.setItem(k, v);
+          count++;
+        }
+      });
+      // メモリ上の変数を再同期
+      const apiKey = localStorage.getItem('nf_api_key');
+      if (apiKey) window.ANTHROPIC_API_KEY = apiKey;
+      const geminiKey = localStorage.getItem('nf_gemini_key');
+      if (geminiKey) window.GEMINI_API_KEY = geminiKey;
+      const acData = localStorage.getItem('nf_accounts');
+      if (acData) try { window.ACCOUNTS = JSON.parse(acData); } catch(_){}
+      toast('📥 インポート完了！', `${count}件の設定を復元しました。ページを再読み込みして反映させてください。`);
+      // 3秒後に自動リロード
+      setTimeout(() => location.reload(), 3000);
+    } catch(err) {
+      toast('❌ インポートエラー', 'JSONファイルの形式が正しくありません: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 
 async function testAndSaveApiKeys() {
