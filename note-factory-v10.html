@@ -4131,7 +4131,7 @@ function saveApiSettings() {
   }
   renderSecretsCheck();
   document.getElementById('api-settings-ov')?.remove();
-  triggerGistSync(); // APIキーもクラウドに同期
+  // ★ APIキーはGist同期しない（デバイス固有）
   toast('✅ APIキー保存完了', 'Claude & Gemini APIキーを保存しました');
 }
 
@@ -5473,8 +5473,7 @@ async function syncToGist(manual = false) {
       nf_auth:         localStorage.getItem('nf_auth')         || '{}',
       nf_gen_titles:   localStorage.getItem('nf_gen_titles')   || '[]',
       nf_daily_ac_mode:localStorage.getItem('nf_daily_ac_mode')|| 'rotate',
-      nf_api_key:      localStorage.getItem('nf_api_key')      || '',
-      nf_gemini_key:   localStorage.getItem('nf_gemini_key')   || '',
+      // ★ APIキーはデバイス固有（同期しない）→ 各PCで個別に設定
       nf_queue_slim:   JSON.stringify((queue||[]).slice(-50).map(q=>({...q, body:(q.body||'').substring(0,3000), thumbs:undefined})))
     };
 
@@ -5529,7 +5528,8 @@ async function loadFromGist(manual = false) {
     if (!data._v) return false;
 
     // ローカルにマージ保存（クラウドが新しければ上書き）
-    const SYNC_KEYS = ['nf_accounts','nf_persona_list','nf_auth','nf_gen_titles','nf_daily_ac_mode','nf_api_key','nf_gemini_key'];
+    // ★ APIキーはデバイス固有なので同期対象から除外（各PCで個別に設定する）
+    const SYNC_KEYS = ['nf_accounts','nf_persona_list','nf_auth','nf_gen_titles','nf_daily_ac_mode'];
     let changed = false;
     SYNC_KEYS.forEach(k => {
       if (data[k] !== undefined && data[k] !== null && data[k] !== '') {
