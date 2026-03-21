@@ -1980,11 +1980,12 @@ async function genThumbs(item) {
     return;
   }
 
-  // ─── Gemini Imagen API 試行 ───
-  const IMAGEN_MODELS = [
-    'imagen-3.0-generate-002',
-    'imagen-3.0-fast-generate-001',
-    'imagen-4.0-generate-001',
+  // ─── Gemini generateContent API（無料枠対応）───
+  // Imagen(:predict)は課金必須のため、generateContentで画像生成するモデルを使用
+  const GEMINI_IMG_MODELS = [
+    'gemini-2.0-flash-preview-image-generation', // 2026年推奨・無料枠対応
+    'gemini-2.0-flash-exp',                       // 実験版フォールバック
+    'gemini-2.5-flash-preview-05-20',             // 2025年版フォールバック
   ];
 
   const maxThumbs = Math.min(item.thumbPrompts.length, 3);
@@ -1999,17 +2000,17 @@ async function genThumbs(item) {
     let generated = false;
     let lastError = '';
 
-    const modelsToTry = workingModel ? [workingModel] : IMAGEN_MODELS;
+    const modelsToTry = workingModel ? [workingModel] : GEMINI_IMG_MODELS;
     for(const model of modelsToTry){
       try{
         const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${key}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
           {
             method:'POST',
             headers:{'Content-Type':'application/json'},
             body:JSON.stringify({
-              instances:[{prompt: enhancedPrompt}],
-              parameters:{sampleCount:1,aspectRatio:'16:9'}
+              contents:[{parts:[{text: enhancedPrompt + ' 16:9 ratio, no text overlay, high quality, photorealistic'}]}],
+              generationConfig:{ responseModalities:['TEXT','IMAGE'] }
             })
           }
         );
@@ -2017,14 +2018,17 @@ async function genThumbs(item) {
         console.log(`Gemini[${model}] status:${r.status}`, JSON.stringify(d).substring(0,400));
 
         if(d.error){
-          lastError = `${model}: ${d.error.message||d.error.status}`;
+          lastError = `${model}: ${d.error.message||d.error.status||JSON.stringify(d.error)}`;
           console.warn(`モデル ${model} エラー:`, d.error);
           continue;
         }
 
-        const b64 = d.predictions?.[0]?.bytesBase64Encoded;
-        if(b64){
-          item.thumbs[i].src = `data:image/png;base64,${b64}`;
+        // generateContent のレスポンス形式: candidates[0].content.parts[].inlineData.data
+        const parts = d.candidates?.[0]?.content?.parts || [];
+        const imgPart = parts.find(p => p.inlineData?.data);
+        if(imgPart){
+          const mime = imgPart.inlineData.mimeType || 'image/png';
+          item.thumbs[i].src = `data:${mime};base64,${imgPart.inlineData.data}`;
           item.thumbs[i].isDemo = false;
           workingModel = model;
           generated = true;
@@ -2032,7 +2036,8 @@ async function genThumbs(item) {
           console.log(`✅ 画像${i+1}枚目 (${model})`);
           break;
         } else {
-          lastError = `${model}: predictionsにデータなし`;
+          lastError = `${model}: 画像データなし（テキストのみレスポンス）`;
+          console.warn(lastError, parts);
         }
       }catch(e){
         lastError = `${model}: ${e.message}`;
@@ -2046,16 +2051,15 @@ async function genThumbs(item) {
       item.thumbs[i].src = generateCanvasThumb(label, item.title, harmKey, i);
       item.thumbs[i].isDemo = false;
       if(i===0 && lastError){
-        // 最初の1枚だけエラー内容をトーストで通知
-        toast('⚠️ Gemini失敗→Canvas代替', lastError.substring(0,60));
+        toast('⚠️ Gemini画像→Canvas代替', lastError.substring(0,80));
       }
     }
     renderHistory();
-    if(i < maxThumbs-1) await sleep(1200);
+    if(i < maxThumbs-1) await sleep(1500); // レート制限対応で少し長めに待機
   }
 
   if(!geminiOk){
-    console.warn('Gemini Imagen: 全モデル失敗。Canvas画像を使用しています。');
+    console.warn('Gemini generateContent: 全モデル失敗。Canvas画像を使用しています。');
   }
   saveQueue();
   renderHistory();
@@ -4086,12 +4090,12 @@ function openApiSettings() {
           <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">取得先: <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--em3)">console.anthropic.com</a></div>
         </div>
         <div style="margin-bottom:20px">
-          <label style="font-size:9px;font-weight:800;color:#888;letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">GOOGLE GEMINI API KEY（サムネ自動生成用・任意）</label>
-          <input type="password" id="api-gemini-key" value="${curGeminiKey}" placeholder="AIzaSy...（なくてもnote生成は動きます）" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s;color:#888" onfocus="this.style.borderColor='#aaa'" onblur="this.style.borderColor='#ddd'">
-          <div style="font-size:9px;color:#e08800;margin-top:5px;font-weight:700;background:#fffbec;border:1px solid #f0d080;padding:6px 8px;border-radius:4px;line-height:1.5">
-            ⚠️ <strong>Geminiキーがなくてもnote生成は100%動きます。</strong><br>
-            Imagen画像生成はGoogleクラウド課金設定が必要なため、通常のAIキーでは403エラーになります。<br>
-            <span style="color:#888">→ サムネはnote生成後に手動で作成するか、設定しなくてOKです</span>
+          <label style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">GOOGLE GEMINI API KEY（サムネ自動生成用・無料OK）</label>
+          <input type="password" id="api-gemini-key" value="${curGeminiKey}" placeholder="AIzaSy..." style="width:100%;padding:10px 12px;border:2px solid var(--em4);border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--em4)'">
+          <div style="font-size:9px;color:#1a7a3a;margin-top:5px;font-weight:700;background:#f0fff5;border:1px solid #a0e0b0;padding:6px 8px;border-radius:4px;line-height:1.5">
+            ✅ <strong>無料枠で画像生成が使えます！</strong>（Gemini 2.0 Flash Image Generation）<br>
+            取得先: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--em3)">aistudio.google.com</a> → 「APIキーを作成」（無料）<br>
+            <span style="color:#5a7f68">→ なくてもnote生成は動きます。入れるとサムネが自動生成されます。</span>
           </div>
         </div>
         <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:10px 13px;border-radius:6px;font-size:10px;color:rgba(160,110,0,.9);font-weight:600;margin-bottom:16px">
@@ -4219,20 +4223,32 @@ async function testAndSaveApiKeys() {
     } catch(e){ results.push('❌ Claude API: 接続失敗'); }
   }
 
-  // Gemini テスト（キーの形式確認のみ・画像生成は課金必要なので403は正常）
+  // Gemini テスト（generateContent APIで実際に画像生成を試みる）
   if(geminiKey) {
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-      if (res.ok) {
-        results.push('✅ Gemini API: キー有効（画像生成は課金設定が別途必要）');
+      const testModel = 'gemini-2.0-flash-preview-image-generation';
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${geminiKey}`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          contents:[{parts:[{text:'A simple red circle on white background'}]}],
+          generationConfig:{responseModalities:['TEXT','IMAGE']}
+        })
+      });
+      const d = await res.json();
+      const hasImg = d.candidates?.[0]?.content?.parts?.some(p=>p.inlineData?.data);
+      if (hasImg) {
+        results.push('✅ Gemini API: 画像生成OK！（無料枠で動作中）');
+      } else if (res.ok) {
+        results.push('⚠️ Gemini API: 接続OK・画像未取得（モデルが対応していない可能性）');
       } else if (res.status === 400 || res.status === 401) {
         results.push(`❌ Gemini API: キーが無効 (${res.status})`);
       } else {
-        results.push(`⚠️ Gemini API: ${res.status}（キーは入力済み・画像生成には課金設定が必要）`);
+        results.push(`⚠️ Gemini API: ${res.status} — ${d.error?.message||'不明なエラー'}`);
       }
-    } catch(e){ results.push('⚠️ Gemini API: 接続できませんでした（note生成には影響なし）'); }
+    } catch(e){ results.push('⚠️ Gemini API: 接続失敗（note生成には影響なし）'); }
   } else {
-    results.push('ℹ️ Gemini APIキー: 未設定（なくてもnote生成は動きます）');
+    results.push('ℹ️ Gemini APIキー: 未設定（サムネ自動生成なし・note生成は動きます）');
   }
 
   if(resultEl) resultEl.innerHTML = results.map(r=>`<div style="font-size:11px;font-weight:700;color:${r.startsWith('✅')?'var(--em3)':r.startsWith('❌')?'var(--red2)':'#e08800'};margin-bottom:3px">${r}</div>`).join('');
