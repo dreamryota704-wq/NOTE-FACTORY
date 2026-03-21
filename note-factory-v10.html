@@ -4086,9 +4086,13 @@ function openApiSettings() {
           <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">取得先: <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--em3)">console.anthropic.com</a></div>
         </div>
         <div style="margin-bottom:20px">
-          <label style="font-size:9px;font-weight:800;color:var(--em3);letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">GOOGLE GEMINI API KEY（Imagen4 サムネ生成用）</label>
-          <input type="password" id="api-gemini-key" value="${curGeminiKey}" placeholder="AIzaSy..." style="width:100%;padding:10px 12px;border:2px solid var(--em4);border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s" onfocus="this.style.borderColor='var(--em)'" onblur="this.style.borderColor='var(--em4)'">
-          <div style="font-size:9px;color:#5a7f68;margin-top:4px;font-weight:600">取得先: <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--em3)">aistudio.google.com</a> → 「APIキーを作成」</div>
+          <label style="font-size:9px;font-weight:800;color:#888;letter-spacing:.2em;font-family:var(--fm);display:block;margin-bottom:6px">GOOGLE GEMINI API KEY（サムネ自動生成用・任意）</label>
+          <input type="password" id="api-gemini-key" value="${curGeminiKey}" placeholder="AIzaSy...（なくてもnote生成は動きます）" style="width:100%;padding:10px 12px;border:2px solid #ddd;border-radius:6px;font-size:12px;font-weight:700;font-family:var(--fm);outline:none;box-sizing:border-box;transition:border .15s;color:#888" onfocus="this.style.borderColor='#aaa'" onblur="this.style.borderColor='#ddd'">
+          <div style="font-size:9px;color:#e08800;margin-top:5px;font-weight:700;background:#fffbec;border:1px solid #f0d080;padding:6px 8px;border-radius:4px;line-height:1.5">
+            ⚠️ <strong>Geminiキーがなくてもnote生成は100%動きます。</strong><br>
+            Imagen画像生成はGoogleクラウド課金設定が必要なため、通常のAIキーでは403エラーになります。<br>
+            <span style="color:#888">→ サムネはnote生成後に手動で作成するか、設定しなくてOKです</span>
+          </div>
         </div>
         <div style="background:rgba(255,200,0,.06);border:1px solid rgba(255,200,0,.2);padding:10px 13px;border-radius:6px;font-size:10px;color:rgba(160,110,0,.9);font-weight:600;margin-bottom:16px">
           ⚠️ APIキーはブラウザのlocalStorageにのみ保存されます。外部には送信しません。
@@ -4215,15 +4219,23 @@ async function testAndSaveApiKeys() {
     } catch(e){ results.push('❌ Claude API: 接続失敗'); }
   }
 
-  // Gemini テスト（APIキーの有効性確認）
+  // Gemini テスト（キーの形式確認のみ・画像生成は課金必要なので403は正常）
   if(geminiKey) {
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-      results.push(res.ok ? '✅ Gemini API: 接続完了' : `❌ Gemini API: エラー (${res.status})`);
-    } catch(e){ results.push('❌ Gemini API: 接続失敗'); }
+      if (res.ok) {
+        results.push('✅ Gemini API: キー有効（画像生成は課金設定が別途必要）');
+      } else if (res.status === 400 || res.status === 401) {
+        results.push(`❌ Gemini API: キーが無効 (${res.status})`);
+      } else {
+        results.push(`⚠️ Gemini API: ${res.status}（キーは入力済み・画像生成には課金設定が必要）`);
+      }
+    } catch(e){ results.push('⚠️ Gemini API: 接続できませんでした（note生成には影響なし）'); }
+  } else {
+    results.push('ℹ️ Gemini APIキー: 未設定（なくてもnote生成は動きます）');
   }
 
-  if(resultEl) resultEl.innerHTML = results.map(r=>`<div style="font-size:11px;font-weight:700;color:${r.startsWith('✅')?'var(--em3)':'var(--red2)'};margin-bottom:3px">${r}</div>`).join('');
+  if(resultEl) resultEl.innerHTML = results.map(r=>`<div style="font-size:11px;font-weight:700;color:${r.startsWith('✅')?'var(--em3)':r.startsWith('❌')?'var(--red2)':'#e08800'};margin-bottom:3px">${r}</div>`).join('');
   toast('🔍 テスト完了', results.join(' / '));
 }
 
