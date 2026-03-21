@@ -1983,9 +1983,9 @@ async function genThumbs(item) {
   // ─── Gemini generateContent API（無料枠対応）───
   // Imagen(:predict)は課金必須のため、generateContentで画像生成するモデルを使用
   const GEMINI_IMG_MODELS = [
-    'gemini-2.0-flash-preview-image-generation', // 2026年推奨・無料枠対応
-    'gemini-2.0-flash-exp',                       // 実験版フォールバック
-    'gemini-2.5-flash-preview-05-20',             // 2025年版フォールバック
+    'gemini-2.0-flash-exp-image-generation',  // 実験版・無料枠対応（2026年確認済）
+    'gemini-3.1-flash-image-preview',          // 最新推奨モデル
+    'gemini-2.5-flash-image',                  // Nano Banana・無料枠
   ];
 
   const maxThumbs = Math.min(item.thumbPrompts.length, 3);
