@@ -5700,41 +5700,15 @@ async function saveSupabaseConfig() {
 const SESSION_HOURS = 5;
 const SESSION_KEY   = 'nf_session_exp';
 
-// 初回起動時にデフォルトパスワードを設定（コンソール操作不要）
+// パスワード機能無効化（常にスキップ）
 (function initDefaultPw() {
-  if (!localStorage.getItem('nf_pw')) {
-    localStorage.setItem('nf_pw', 'Gapg4274');
-  }
+  localStorage.removeItem('nf_pw');
 })();
 
 
 function checkLogin() {
-  const savedPw = localStorage.getItem('nf_pw') || '';
-  if (!savedPw) {
-    document.getElementById('login-screen').style.display = 'none';
-    return;
-  }
-  // 5時間セッションチェック
-  const expiry = parseInt(localStorage.getItem(SESSION_KEY) || '0', 10);
-  const now    = Date.now();
-  if (expiry > now) {
-    // セッション有効 → ログイン画面をスキップ
-    document.getElementById('login-screen').style.display = 'none';
-    const remain = Math.ceil((expiry - now) / 60000);
-    console.info(`[NOTE FACTORY] セッション有効（残り約${remain}分）`);
-  } else {
-    // 期限切れ or 初回
-    document.getElementById('login-screen').style.display = 'flex';
-    setTimeout(() => document.getElementById('login-pw-input')?.focus(), 100);
-    if (expiry > 0) {
-      const errEl = document.getElementById('login-error');
-      if (errEl) {
-        errEl.textContent = 'セッションが期限切れです。再度ログインしてください';
-        errEl.style.display = 'block';
-        errEl.style.color = '#e08800';
-      }
-    }
-  }
+  // パスワードなし → 常にスキップ
+  document.getElementById('login-screen').style.display = 'none';
 }
 
 function tryLogin() {
