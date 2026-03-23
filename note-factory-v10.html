@@ -2856,21 +2856,16 @@ async function fetchRefUrl() {
 
     previewEl.style.display = 'block';
     previewEl.textContent   = preview + (_uploadedFileText.length > 400 ? '...' : '');
-    statusEl.textContent    = `✅ 取得完了 (${Math.round(_uploadedFileText.length / 1000)}KB相当) — AI分析準備完了`;
+    statusEl.textContent    = `✅ 取得完了 (${Math.round(_uploadedFileText.length / 1000)}KB相当)`;
     statusEl.style.color    = 'var(--em)';
     if (uploadSt) uploadSt.textContent = `🌐 URL取得済 (${Math.round(_uploadedFileText.length / 1000)}KB)`;
 
-    // Claude分析
     analysisEl.style.display = 'block';
-    analysisEl.innerHTML = '<div style="font-size:10px;color:#5a7f68;font-weight:700;padding:8px 0">🔍 AIが内容を分析中...</div>';
-    const analysis = await analyzeUploadedContent(_uploadedFileText);
     analysisEl.innerHTML = `
-      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:12px;font-size:10px;line-height:1.7;color:#0d1a12;font-weight:600">
-        <div style="font-size:11px;font-weight:800;color:var(--em3);margin-bottom:8px">📊 AI分析結果（参考コンテンツ解析）</div>
-        <div style="white-space:pre-wrap">${analysis.summary}</div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--em4);display:flex;gap:8px">
-          <button class="btn b-r b-sm" onclick="applyAnalysisToForm(${JSON.stringify(analysis).replace(/"/g,'&quot;')})">✅ この分析を使ってnoteを生成</button>
-          <button class="btn b-o b-xs" onclick="clearUploadedFile();document.getElementById('c-ref-url').value='';document.getElementById('c-url-status').style.display='none'">✕ クリア</button>
+      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:10px 12px;font-size:10px;color:#0d1a12;font-weight:700">
+        ✅ 参考コンテンツを読み込みました。このまま下の「構成スタイル」と「note内容」を選んで生成してください。
+        <div style="margin-top:8px">
+          <button class="btn b-o b-xs" onclick="clearUploadedFile();document.getElementById('c-ref-url').value='';document.getElementById('c-url-status').style.display='none';document.getElementById('c-upload-analysis').style.display='none'">✕ クリア</button>
         </div>
       </div>`;
 
@@ -2909,19 +2904,14 @@ async function onFileSelected(input) {
 
     previewEl.style.display = 'block';
     previewEl.textContent = preview + (_uploadedFileText.length > 400 ? '...' : '');
-    statusEl.textContent = `✅ ${file.name} (${Math.round(_uploadedFileText.length/1000)}KB相当) — AI分析準備完了`;
+    statusEl.textContent = `✅ ${file.name} (${Math.round(_uploadedFileText.length/1000)}KB相当) — 読み込み完了`;
     statusEl.style.color = 'var(--em)';
 
-    // Claude に即座に分析させる
     analysisEl.style.display = 'block';
-    analysisEl.innerHTML = '<div style="font-size:10px;color:#5a7f68;font-weight:700;padding:8px 0">🔍 AIが内容を分析中...</div>';
-    const analysis = await analyzeUploadedContent(_uploadedFileText);
     analysisEl.innerHTML = `
-      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:12px;font-size:10px;line-height:1.7;color:#0d1a12;font-weight:600">
-        <div style="font-size:11px;font-weight:800;color:var(--em3);margin-bottom:8px">📊 AI分析結果（80点→120点のポイント）</div>
-        <div id="analysis-text" style="white-space:pre-wrap">${analysis.summary}</div>
-        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--em4);display:flex;gap:8px">
-          <button class="btn b-r b-sm" onclick="applyAnalysisToForm(${JSON.stringify(analysis).replace(/"/g,'&quot;')})">✅ この分析を使ってnoteを生成</button>
+      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:10px 12px;font-size:10px;color:#0d1a12;font-weight:700">
+        ✅ ファイルを読み込みました。このまま下の「構成スタイル」と「note内容」を選んで生成してください。
+        <div style="margin-top:8px">
           <button class="btn b-o b-xs" onclick="clearUploadedFile()">✕ ファイルをクリア</button>
         </div>
       </div>`;
