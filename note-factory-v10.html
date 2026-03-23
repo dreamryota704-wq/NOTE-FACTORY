@@ -512,6 +512,15 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
             </div>
             <div id="c-upload-preview" style="display:none;margin-top:10px;background:#fff;border:1px solid var(--em4);border-radius:6px;padding:10px;font-size:10px;color:#0d1a12;max-height:120px;overflow-y:auto;line-height:1.7;font-weight:600"></div>
             <div id="c-upload-analysis" style="display:none;margin-top:8px"></div>
+            <!-- URL取得 -->
+            <div style="margin-top:10px;border-top:1px solid var(--em4);padding-top:10px">
+              <div style="font-size:10px;color:#5a7f68;font-weight:700;margin-bottom:6px">🌐 URLから参考コンテンツを取得（YouTube・Webページ対応）</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="c-ref-url" placeholder="https://www.youtube.com/watch?v=...  または Webページ URL" style="flex:1;font-size:10px;padding:6px 10px;border:1px solid var(--em4);border-radius:6px;outline:none;font-weight:600;background:#fff">
+                <button class="btn b-o b-sm" style="flex-shrink:0" onclick="fetchRefUrl()">🔗 取得</button>
+              </div>
+              <div id="c-url-status" style="font-size:10px;font-weight:600;margin-top:4px;display:none"></div>
+            </div>
           </div>
 
           <div class="fg">
@@ -2714,6 +2723,123 @@ function showSocialTab(el, panelId) {
 // ファイルアップロード → 120点リメイク
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _uploadedFileText = '';
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// URL取得 → 参考コンテンツ読み込み（YouTube・Webページ対応）
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function fetchRefUrl() {
+  const urlInput  = document.getElementById('c-ref-url');
+  const statusEl  = document.getElementById('c-url-status');
+  const previewEl = document.getElementById('c-upload-preview');
+  const analysisEl= document.getElementById('c-upload-analysis');
+  const uploadSt  = document.getElementById('c-upload-status');
+  const url = urlInput.value.trim();
+
+  if (!url) { toast('⚠️ URL未入力', 'URLを入力してください'); return; }
+
+  statusEl.style.display = 'block';
+  statusEl.textContent   = '⏳ コンテンツ取得中...';
+  statusEl.style.color   = 'var(--em3)';
+  previewEl.style.display  = 'none';
+  analysisEl.style.display = 'none';
+
+  try {
+    let text = '';
+    const PROXY = 'https://api.allorigins.win/get?url=';
+    const isYT  = /youtube\.com\/watch|youtu\.be\//.test(url);
+
+    if (isYT) {
+      // ── YouTube ──────────────────────────────
+      const vidMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+      const vid = vidMatch ? vidMatch[1] : null;
+      let title = '', channel = '', desc = '', transcript = '';
+
+      // ① ページHTMLからメタ情報・説明文を抽出
+      const pageRes  = await fetch(PROXY + encodeURIComponent(url));
+      const pageData = await pageRes.json();
+      const html     = pageData.contents || '';
+
+      const titleM   = html.match(/"title":"([^"]{1,200})"/);
+      title   = titleM   ? titleM[1]   : '';
+      const chanM    = html.match(/"channelName":"([^"]{1,100})"/);
+      channel = chanM    ? chanM[1]    : '';
+      const descM    = html.match(/"shortDescription":"([\s\S]{1,4000})","isCrawlable"/);
+      desc    = descM    ? descM[1].replace(/\\n/g,'\n').replace(/\\"/g,'"') : '';
+
+      // ② 字幕（日本語 → 英語 の順に試みる）
+      if (vid) {
+        for (const lang of ['ja','en']) {
+          try {
+            const tRes  = await fetch(PROXY + encodeURIComponent(
+              `https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`));
+            const tData = await tRes.json();
+            if (tData.contents && tData.contents.length > 100) {
+              const parsed = JSON.parse(tData.contents);
+              if (parsed.events) {
+                transcript = parsed.events
+                  .filter(e => e.segs)
+                  .map(e => e.segs.map(s => s.utf8 || '').join(''))
+                  .join(' ');
+                if (transcript.length > 100) break;
+              }
+            }
+          } catch(e) {}
+        }
+      }
+
+      text = `【YouTube動画参考コンテンツ】\nタイトル: ${title}\nチャンネル: ${channel}\n\n` +
+             (transcript.length > 100
+               ? `【字幕・書き起こし】\n${transcript}`
+               : `【動画説明文】\n${desc}`);
+
+    } else {
+      // ── 一般Webページ ────────────────────────
+      const res  = await fetch(PROXY + encodeURIComponent(url));
+      const data = await res.json();
+      let html   = data.contents || '';
+      html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
+                 .replace(/<style[\s\S]*?<\/style>/gi,  '');
+      text = html.replace(/<[^>]+>/g,  ' ')
+                 .replace(/&nbsp;/g,   ' ')
+                 .replace(/&amp;/g,    '&')
+                 .replace(/&lt;/g,     '<')
+                 .replace(/&gt;/g,     '>')
+                 .replace(/\s{2,}/g,   ' ')
+                 .trim();
+    }
+
+    if (!text || text.length < 50) {
+      throw new Error('コンテンツが取得できませんでした。URLを確認するか、内容を直接テキストで貼り付けてください');
+    }
+
+    _uploadedFileText = text.substring(0, 12000);
+    const preview     = _uploadedFileText.substring(0, 400).replace(/\n/g, ' ');
+
+    previewEl.style.display = 'block';
+    previewEl.textContent   = preview + (_uploadedFileText.length > 400 ? '...' : '');
+    statusEl.textContent    = `✅ 取得完了 (${Math.round(_uploadedFileText.length / 1000)}KB相当) — AI分析準備完了`;
+    statusEl.style.color    = 'var(--em)';
+    if (uploadSt) { uploadSt.textContent = `🌐 URL取得済 (${Math.round(_uploadedFileText.length / 1000)}KB)`; }
+
+    // Claude分析
+    analysisEl.style.display = 'block';
+    analysisEl.innerHTML = '<div style="font-size:10px;color:#5a7f68;font-weight:700;padding:8px 0">🔍 AIが内容を分析中...</div>';
+    const analysis = await analyzeUploadedContent(_uploadedFileText);
+    analysisEl.innerHTML = `
+      <div style="background:#fff;border:1px solid var(--em4);border-radius:6px;padding:12px;font-size:10px;line-height:1.7;color:#0d1a12;font-weight:600">
+        <div style="font-size:11px;font-weight:800;color:var(--em3);margin-bottom:8px">📊 AI分析結果（参考コンテンツ解析）</div>
+        <div style="white-space:pre-wrap">${analysis.summary}</div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--em4);display:flex;gap:8px">
+          <button class="btn b-r b-sm" onclick="applyAnalysisToForm(${JSON.stringify(analysis).replace(/"/g,'&quot;')})">✅ この分析を使ってnoteを生成</button>
+          <button class="btn b-o b-xs" onclick="clearUploadedFile();document.getElementById('c-ref-url').value='';document.getElementById('c-url-status').style.display='none'">✕ クリア</button>
+        </div>
+      </div>`;
+
+  } catch(e) {
+    statusEl.textContent = `⚠️ エラー: ${e.message}`;
+    statusEl.style.color = 'var(--red2)';
+  }
+}
 
 async function onFileSelected(input) {
   const file = input.files[0];
