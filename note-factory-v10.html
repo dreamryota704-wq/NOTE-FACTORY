@@ -2727,6 +2727,41 @@ let _uploadedFileText = '';
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // URL取得 → 参考コンテンツ読み込み（YouTube・Webページ対応）
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CORSプロキシを順番に試してHTMLを返す
+async function proxyFetch(targetUrl) {
+  const proxies = [
+    { type: 'direct', url: `https://corsproxy.io/?${encodeURIComponent(targetUrl)}` },
+    { type: 'json',   url: `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}` },
+    { type: 'direct', url: `https://thingproxy.freeboard.io/fetch/${targetUrl}` },
+  ];
+  let lastErr = null;
+  for (const p of proxies) {
+    try {
+      const res = await fetch(p.url, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) continue;
+      if (p.type === 'json') {
+        const d = await res.json();
+        if (d.contents) return d.contents;
+      } else {
+        const t = await res.text();
+        if (t && t.length > 50) return t;
+      }
+    } catch(e) { lastErr = e; }
+  }
+  throw new Error(`取得失敗（全プロキシ試行済）: ${lastErr?.message || 'network error'}`);
+}
+
+// HTMLからプレーンテキストを抽出
+function extractText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/\s{2,}/g, ' ').trim();
+}
+
 async function fetchRefUrl() {
   const urlInput  = document.getElementById('c-ref-url');
   const statusEl  = document.getElementById('c-url-status');
@@ -2737,79 +2772,83 @@ async function fetchRefUrl() {
 
   if (!url) { toast('⚠️ URL未入力', 'URLを入力してください'); return; }
 
-  statusEl.style.display = 'block';
-  statusEl.textContent   = '⏳ コンテンツ取得中...';
-  statusEl.style.color   = 'var(--em3)';
+  statusEl.style.display   = 'block';
+  statusEl.textContent     = '⏳ コンテンツ取得中...（最大30秒）';
+  statusEl.style.color     = 'var(--em3)';
   previewEl.style.display  = 'none';
   analysisEl.style.display = 'none';
 
   try {
     let text = '';
-    const PROXY = 'https://api.allorigins.win/get?url=';
-    const isYT  = /youtube\.com\/watch|youtu\.be\//.test(url);
+    const isYT = /youtube\.com\/watch|youtu\.be\//.test(url);
 
     if (isYT) {
-      // ── YouTube ──────────────────────────────
+      // ── YouTube ──────────────────────────────────────────
       const vidMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
       const vid = vidMatch ? vidMatch[1] : null;
       let title = '', channel = '', desc = '', transcript = '';
 
-      // ① ページHTMLからメタ情報・説明文を抽出
-      const pageRes  = await fetch(PROXY + encodeURIComponent(url));
-      const pageData = await pageRes.json();
-      const html     = pageData.contents || '';
+      // ① oEmbed（CORSなし・必ず動く）でタイトル・チャンネル取得
+      try {
+        const oe = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`);
+        if (oe.ok) {
+          const oed = await oe.json();
+          title   = oed.title        || '';
+          channel = oed.author_name  || '';
+        }
+      } catch(e) {}
 
-      const titleM   = html.match(/"title":"([^"]{1,200})"/);
-      title   = titleM   ? titleM[1]   : '';
-      const chanM    = html.match(/"channelName":"([^"]{1,100})"/);
-      channel = chanM    ? chanM[1]    : '';
-      const descM    = html.match(/"shortDescription":"([\s\S]{1,4000})","isCrawlable"/);
-      desc    = descM    ? descM[1].replace(/\\n/g,'\n').replace(/\\"/g,'"') : '';
+      // ② プロキシ経由でページHTML → 説明文抽出
+      try {
+        statusEl.textContent = '⏳ 動画説明文を取得中...';
+        const html = await proxyFetch(url);
+        const descM = html.match(/"shortDescription":"([\s\S]{1,4000})","isCrawlable"/);
+        if (descM) desc = descM[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\u[\da-f]{4}/gi, m => String.fromCharCode(parseInt(m.slice(2), 16)));
+        if (!title) {
+          const tM = html.match(/"title":"([^"]{1,200})"/);
+          if (tM) title = tM[1];
+        }
+        if (!channel) {
+          const cM = html.match(/"channelName":"([^"]{1,100})"/);
+          if (cM) channel = cM[1];
+        }
+      } catch(e) {}
 
-      // ② 字幕（日本語 → 英語 の順に試みる）
+      // ③ 字幕（日本語 → 英語）
       if (vid) {
-        for (const lang of ['ja','en']) {
+        for (const lang of ['ja', 'en']) {
           try {
-            const tRes  = await fetch(PROXY + encodeURIComponent(
-              `https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`));
-            const tData = await tRes.json();
-            if (tData.contents && tData.contents.length > 100) {
-              const parsed = JSON.parse(tData.contents);
-              if (parsed.events) {
-                transcript = parsed.events
-                  .filter(e => e.segs)
-                  .map(e => e.segs.map(s => s.utf8 || '').join(''))
-                  .join(' ');
-                if (transcript.length > 100) break;
-              }
+            statusEl.textContent = `⏳ 字幕取得中（${lang}）...`;
+            const tHtml = await proxyFetch(
+              `https://www.youtube.com/api/timedtext?v=${vid}&lang=${lang}&fmt=json3`);
+            const parsed = JSON.parse(tHtml);
+            if (parsed.events) {
+              transcript = parsed.events
+                .filter(e => e.segs)
+                .map(e => e.segs.map(s => s.utf8 || '').join(''))
+                .join(' ');
+              if (transcript.length > 100) break;
             }
           } catch(e) {}
         }
       }
 
-      text = `【YouTube動画参考コンテンツ】\nタイトル: ${title}\nチャンネル: ${channel}\n\n` +
+      text = `【YouTube動画 参考コンテンツ】\nタイトル: ${title}\nチャンネル: ${channel}\n\n` +
              (transcript.length > 100
                ? `【字幕・書き起こし】\n${transcript}`
-               : `【動画説明文】\n${desc}`);
+               : desc
+                 ? `【動画説明文】\n${desc}`
+                 : '（説明文・字幕の取得に失敗しました。タイトルとチャンネル情報のみ取得できました）');
 
     } else {
-      // ── 一般Webページ ────────────────────────
-      const res  = await fetch(PROXY + encodeURIComponent(url));
-      const data = await res.json();
-      let html   = data.contents || '';
-      html = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-                 .replace(/<style[\s\S]*?<\/style>/gi,  '');
-      text = html.replace(/<[^>]+>/g,  ' ')
-                 .replace(/&nbsp;/g,   ' ')
-                 .replace(/&amp;/g,    '&')
-                 .replace(/&lt;/g,     '<')
-                 .replace(/&gt;/g,     '>')
-                 .replace(/\s{2,}/g,   ' ')
-                 .trim();
+      // ── 一般Webページ ─────────────────────────────────────
+      statusEl.textContent = '⏳ Webページを取得中...';
+      const html = await proxyFetch(url);
+      text = extractText(html);
     }
 
-    if (!text || text.length < 50) {
-      throw new Error('コンテンツが取得できませんでした。URLを確認するか、内容を直接テキストで貼り付けてください');
+    if (!text || text.length < 30) {
+      throw new Error('コンテンツが取得できませんでした。内容を直接「参考文章」欄にテキストで貼り付けてください');
     }
 
     _uploadedFileText = text.substring(0, 12000);
@@ -2819,7 +2858,7 @@ async function fetchRefUrl() {
     previewEl.textContent   = preview + (_uploadedFileText.length > 400 ? '...' : '');
     statusEl.textContent    = `✅ 取得完了 (${Math.round(_uploadedFileText.length / 1000)}KB相当) — AI分析準備完了`;
     statusEl.style.color    = 'var(--em)';
-    if (uploadSt) { uploadSt.textContent = `🌐 URL取得済 (${Math.round(_uploadedFileText.length / 1000)}KB)`; }
+    if (uploadSt) uploadSt.textContent = `🌐 URL取得済 (${Math.round(_uploadedFileText.length / 1000)}KB)`;
 
     // Claude分析
     analysisEl.style.display = 'block';
