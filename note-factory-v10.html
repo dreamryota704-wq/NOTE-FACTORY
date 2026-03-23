@@ -1998,6 +1998,11 @@ async function generateSingleNote(item) {
     return await generateChatreNote(item, ac);
   }
 
+  // ━━ 裏垢女子式（悲しい過去×えっちな本音×LINE誘導）モード ━━
+  if (item.style === 'uragao') {
+    return await generateUragaoNote(item, ac);
+  }
+
   const structures = {
     story:`はじめに（200字）→体験談の設定・感情で共感から始める\n第1章（600字）→当時の状況と問題の背景\n第2章（600字）→転機となった気づき・行動\n第3章（700字）→実際にやったこと（具体的手順）\n${isPaid?'第4章（700字）→詳細な方法と再現手順\n第5章（500字）→結果と証拠\n':''}おわりに（200字）→読者への行動促し${isPaid?'':`\n有料noteへの自然な誘導: ${prod.url}`}`,
     howto:`はじめに（200字）→この記事で得られること\n${isPaid?'準備（300字）→必要なものと前提条件\n':''}STEP 1〜${isPaid?6:3}（各${isPaid?600:450}字）→具体手順、各STEPに実体験1つ\nまとめ（200字）→復習と次のアクション`,
@@ -2828,6 +2833,7 @@ function renderDailySlots() {
               <option value="nenegaki" ${p.style==='nenegaki'?'selected':''}>💎 寝稼ぎ式Pro</option>
               <option value="love" ${p.style==='love'?'selected':''}>💕 愛太郎式恋愛・復縁</option>
               <option value="chatre" ${p.style==='chatre'?'selected':''}>📡 チャトレ式</option>
+              <option value="uragao" ${p.style==='uragao'?'selected':''}>🔑 裏垢女子式</option>
             </select>
             <select class="fsl" style="font-size:10px;padding:3px 6px;height:auto;font-weight:700" onchange="updateDailyPlanField(${i},'words',this.value)">
               <option value="2000" ${p.words==='2000'?'selected':''}>2,000字</option>
@@ -3404,6 +3410,228 @@ JSON形式のみで返す（コードブロックなし）:
 // chatreska-master スキル（SKILL1〜23）を全面適用
 // コイン設計・常連製造・脳科学・記事構成テンプレ完全実装
 // ══════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+// 裏垢女子式 無料noteジェネレーター
+// さき・つみき・みら・あやか 4記事の共通パターンを完全蒸留
+// 9ブロック構成（悲しい過去 × えっちな本音 × LINE誘導）
+// ══════════════════════════════════════════════════════════════
+async function generateUragaoNote(item, ac) {
+  const c = ac.character || {};
+  const p = ac.persona   || {};
+
+  const name       = c.name        || 'みなみ';
+  const age        = c.age         || '22';
+  const background = c.background  || '都内在住の普通の女の子。SNSで自分をさらけ出すことで自由になれた。';
+  const firstPerson= c.first_person|| '私';
+  const tone       = c.tone        || '素直で感情豊か。「でも」「だけど」「だって」「正直」を多用。「……」や絵文字で感情を演出。';
+  const phrases    = (c.phrases    || ['正直ね','でも','だって','……','ほんとは']).join('、');
+
+  // ペルソナから悲しい過去の設定を取得（なければデフォルト）
+  const painStory  = (p.pains?.[0]) || '彼氏に浮気されて心が壊れた';
+  const target     = p.target || '裏垢女子・SNSで自分をさらけ出したい女性・秘密を共有したい人';
+
+  // --- 裏垢女子の9ブロック構成ナレッジ ---
+  const URAGAO_KNOWLEDGE = `
+【裏垢女子式 無料note 黄金9ブロック構成】
+※さき・つみき・みら・あやか 4記事から抽出した売れるパターン
+
+■ ブロック①【導入・感謝 + "最後に大事な報告"フック】
+- 「こんばんは、[名前]です🌙」で名乗り
+- 「いつも見てくれてありがとうございます😢」即感謝
+- 「最後に大事な報告があるから最後まで読んでね」を冒頭に必ず入れる（離脱防止フック）
+- 音声挨拶を冒頭に置く演出もあり
+
+■ ブロック②【秘密の限定感・煽り】
+- 「応援してくれてる人だけ読んでね……！！」
+- 「このnoteで初めて話す秘密です」
+- 「私のことを嫌いにならないで見てほしい」
+- 少し辛くなる内容かもしれないが最後まで読んでほしいと伝える
+
+■ ブロック③【表の自分・自己紹介】
+- 年齢+職業/状況（例：21歳アパレル店員、20代主婦、20歳専門学生）
+- SNSを始めたきっかけ（「誰かの憧れになれたら」「友達と離れて寂しくて」）
+- 純粋で一生懸命な普通の女の子感を出す
+- フォロワーが増える喜び・仕事への真剣さなど
+
+■ ブロック④【転換点・変化の始まり】
+- 環境変化・出来事（結婚/付き合い始め/転勤/別れ/家族の病気）
+- 最初は疑わなかったのに少しずつ不安が芽生える描写
+- 「認めたくなかった」「でも嫌な予感はしてた」
+
+■ ブロック⑤【幸せだった頃の描写（落差のための助走）】
+- 「最初は本当に幸せだった」「こんな人がいたんだって思えた」
+- 具体的な幸せエピソード（誕生日、一緒に過ごした時間）
+- 「まさに理想の彼氏/環境でした……」と余韻をつくる
+
+■ ブロック⑥【崩壊の予感・違和感の積み重ね】
+- LINEの返信が遅くなる、夜帰ってこない、スマホを隠す
+- 「一度疑い始めると止まらなかった」
+- 短文の連続でテンポよく不安感を高める
+
+■ ブロック⑦【どん底・衝撃の事実発覚】
+- スマホを見てしまう、証拠を見つける瞬間
+- 誕生日に一人で過ごす、ケーキを捨てる等の具体的どん底エピソード
+- 「頭が真っ白になった」「手が震えた」「涙が止まらなかった」
+- 「……」を多用して余韻を演出する
+- 具体的すぎず、読者に想像させる絶妙な曖昧さを保つ
+
+■ ブロック⑧【裏の自分の告白・えっちな本音の開示】
+これが裏垢女子式の核心：
+- 「ここからは私の秘密の話」への転換
+- 「性欲がなくなったわけじゃない」「えっちな性格なんです」
+- 「見られることへのドキドキ感が好き」「別垢でギリギリの写真投稿してる」
+- 「心の寂しさと性的な欲求がつながっている」という深い告白
+- 「全員の特別じゃなくて、あなただけの特別になりたい」
+- 表の自分（職業・名前）と裏の自分の二重性を魅力に変える
+
+■ ブロック⑨【CTA・LINE誘導・限定感・日時告知】
+- 「ここからはもっと[名前]のこと気になる人へのご報告です」
+- 特典内容（必ず以下を含む）：
+  ✅ シークレットアカウントへの招待
+  ✅ 未公開の「私の特別な姿」の写真/動画
+  ✅ 初音声
+  ✅ お誘い券/密会の機会（先着制）
+- 「先着〇名様のみ・期間限定〇日間・再販予定なし」
+- LINE登録リンク（「今すぐ追加してね」）
+- X/引用RT感想投稿→特典プレゼントの仕掛け
+- 「楽しみにしててね」「待ってるね」で締める
+
+■ 文体・表現の鉄則
+・「……」を感情の節目に多用（崩壊・告白・どん底）
+・絵文字：😢🥺💖😔🌙✨💕❤️🎀（場面別に使い分け）
+・「でも」「だけど」「だって」「正直」を多用
+・短文の連続でリズムをつくる
+・体言止め（「あの夜。」「ただ、泣いてた。」）
+・「もっと知ってほしかった」「秘密を共有したい」を軸に
+・すべてひらがな多めで柔らかく（「ほんとうに」「ありがとう」）
+・「えっちな自分」は直接的に書きすぎず、読者に想像させる程度に
+`;
+
+  const systemPrompt = `あなたは今から完全に「${name}」（${age}歳）という人物になりきり、裏垢女子として無料noteを書きます。
+
+プロフィール: ${background}
+一人称: ${firstPerson}
+文体: ${tone}
+口癖（自然に散りばめる）: ${phrases}
+禁止: HTMLタグ、記号（・▶︎→★◆など）、過度に露骨な性的表現（示唆・匂わせ程度にとどめる）
+
+ターゲット読者: ${target}
+読者の共感ポイント: ${painStory}
+
+${URAGAO_KNOWLEDGE}`;
+
+  const userPrompt = `以下の「裏垢女子式 黄金9ブロック構成」で無料note（有料コンテンツへのLINE誘導付き）を完全に書いてください。
+
+ペルソナ名: ${name}（${age}歳）
+悲しい過去のテーマ: ${item.problem || painStory}
+伝えたいメッセージ: ${item.message || p.desires?.[0] || '秘密を共有できる特別な関係を作りたい'}
+${item.titleHint ? `タイトル案: ${item.titleHint}` : `タイトルは読者の好奇心をそそるもの（例：「${name}の笑顔の裏側」「${name}が初めて話す秘密」「${name}のえっちな本音」）`}
+
+【構成（9ブロック）】
+①導入（200字）: 「こんばんは、${name}です」+ 感謝 + 「最後に大事な報告あるよ」フック必須
+②煽り（150字）: 「応援してくれてる人だけ読んでね」+ 少し辛い話かもしれない予告
+③自己紹介（400字）: 年齢・職業・SNS始めたきっかけ・純粋な普通の女の子感
+④転換点（300字）: 変化が始まった出来事・最初の不安の芽生え
+⑤幸せだった頃（400字）: 大切だった人との幸せエピソード。「でした……」と余韻
+⑥崩壊の予感（300字）: 少しずつおかしくなっていく描写。短文連続でテンポよく
+⑦どん底（500字）: 衝撃の事実発覚。「頭が真っ白」「手が震えた」。「……」多用
+⑧裏の自分の告白（400字）: 「えっちな性格なんです」「見られるのがドキドキする」「別垢で投稿してる」。示唆・匂わせ程度に
+⑨CTA・LINE誘導（400字）: 「ここからは気になる人だけへのご報告💓」→特典案内（シークレット垢招待・未公開写真・音声・お誘い券）→先着〇名・期間限定→LINE登録リンク案内→感想引用RTでプレゼント
+
+【絶対ルール】
+・「最後に大事な報告があるよ」を冒頭に入れる（最後まで読ませるフック）
+・幸せな時期→崩壊→どん底の落差を大きくする
+・「……」は崩壊・どん底・告白の場面で効果的に使う
+・「えっちな自分」の告白は直接的すぎず、読者に想像させる匂わせレベルで
+・CTA部分は限定感（先着・期間限定・再販なし）を必ず入れる
+・LINE登録リンクのURLは「[LINEリンク]」と記載する
+・感想の引用RT特典（「引用してくれた方に特別プレゼント」）を最後に入れる
+・指定文字数: ${item.words || 3000}字以上（必ずこれ以上で書くこと）
+${item.uploadText ? `【参考コンテンツ】エッセンスだけ抽出して自然な形に昇華してください。\n${item.uploadText.substring(0, 2000)}` : ''}
+
+JSON形式のみで返してください（コードブロックなし、説明文なし）:
+{
+  "title": "noteタイトル（例：${name}の笑顔の裏側）",
+  "body": "note本文全体（改行は\\nで表現、記号なし、クリーンテキスト）",
+  "description": "概要文160字（読者の好奇心をそそる内容）",
+  "tags": ["裏垢","悲しい過去","秘密","本音","えっち"],
+  "threads_post": "${item.genThreads ? 'Threads投稿文（280字以内）' : ''}",
+  "x_post": "${item.genX ? 'X投稿文（140字以内）' : ''}",
+  "thumbnail_prompts": [
+    "カバー画像の英語プロンプト（タイトルに合わせた16:9サムネ。若い日本人女性のシルエットまたは後ろ姿。秘密・夜・感情のイメージ。暗めのトーンに柔らかい光。テキストなし。シネマティックな雰囲気）",
+    "導入画像の英語プロンプト（夜の街・窓の外・スマートフォン画面を見る女性の手。孤独と感情のイメージ）",
+    "イメージ画像の英語プロンプト（幸せそうな瞬間と孤独の対比。花・涙・夜空など感情的なビジュアル）"
+  ]
+}`;
+
+  const apiKey = localStorage.getItem('nf_api_key') || '';
+  if (!apiKey) {
+    item.status = 'error';
+    item.error  = 'Claude APIキーが未設定です。設定タブからAPIキーを入力してください';
+    saveQueue(); renderQueueList(); renderHistory();
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 16000,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error?.message || `API Error ${res.status}`);
+    }
+
+    const data = await res.json();
+    const raw = data.content?.[0]?.text || '';
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSON形式のレスポンスが取得できませんでした');
+
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    item.title        = parsed.title        || 'タイトル未設定';
+    item.body         = (parsed.body        || '').replace(/\\n/g, '\n');
+    item.description  = parsed.description  || '';
+    item.tags         = parsed.tags         || [];
+    item.threadsPost  = parsed.threads_post || '';
+    item.xPost        = parsed.x_post       || '';
+    item.thumbPrompts = parsed.thumbnail_prompts || [];
+    item.status       = 'done';
+    item.genTime      = new Date().toLocaleTimeString('ja-JP');
+
+    GENERATED_TITLES.push(item.title);
+    if (GENERATED_TITLES.length > 200) GENERATED_TITLES.shift();
+    localStorage.setItem('nf_gen_titles', JSON.stringify(GENERATED_TITLES));
+
+    await genThumbs(item);
+    updateDraftNoteSelect();
+    await autoSaveDraft(item);
+
+  } catch(e) {
+    item.status = 'error';
+    item.error  = e.message;
+    console.error('裏垢女子式生成エラー:', e);
+  }
+
+  saveQueue();
+  renderQueueList();
+  document.getElementById('b-create').textContent = queue.filter(q => q.status === 'done').length;
+  renderHistory();
+  if (item.status === 'done' && queue.filter(q => q.status === 'done').length === 1) showNoteViewer(item);
+}
+
 async function generateChatreNote(item, ac) {
   const c = ac.character || {};
   const p = ac.persona   || {};
