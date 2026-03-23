@@ -528,6 +528,7 @@ code{background:#e8f8f0;padding:1px 6px;font-family:var(--fm);font-size:9px;colo
               <option value="nenegaki">💎 寝稼ぎ式Pro【Threads特化・心理設計・キラーフレーズ全込み】</option>
               <option value="love">💕 愛太郎式 恋愛・復縁特化【14ステップセールス＋9章有料本編】</option>
               <option value="chatre">📡 チャトレ式【ストチャ特化・コイン設計・常連製造・脳科学全込み】</option>
+              <option value="uragao">🔑 裏垢女子式【悲しい過去×えっちな本音×LINE誘導】</option>
             </select>
             <div id="style-tip-box" style="margin-top:8px"></div>
           </div>
@@ -2966,7 +2967,7 @@ function resetDailyPlan() {
 
 function renderDailySlots() {
   const plan = getDailyPlan();
-  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス',ponyo:'ぽにょ式',nenegaki:'寝稼ぎ式Pro',love:'💕 愛太郎式恋愛',chatre:'📡 チャトレ式'};
+  const styleNames = {story:'ストーリー',knowhow:'ノウハウ',howto:'ハウツー',list:'リスト',reveal:'衝撃解説',dialog:'Q&A',sales:'セールス',ponyo:'ぽにょ式',nenegaki:'寝稼ぎ式Pro',love:'💕 愛太郎式恋愛',chatre:'📡 チャトレ式',uragao:'🔑 裏垢女子式'};
   const priceMap = {p980:980,p2980:2980,p5980:5980,p9800:9800,p19800:19800,p29800:29800,梅:2980,竹:9800,松:29800};
 
   document.getElementById('daily-slots').innerHTML = plan.map((p,i) => `
